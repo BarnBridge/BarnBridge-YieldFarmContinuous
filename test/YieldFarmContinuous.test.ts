@@ -84,15 +84,6 @@ describe('Rewards standalone pool single token', function () {
             expect((await rewards.rewardRatePerSecond())).to.equal(rate);
         });
 
-        it('returns correct result on calculateRatePerSecond', async function () {
-            const rate = amount.div(7 * 24 * 60 * 60);
-
-            const start = Math.floor(Date.now() / 1000);
-            const end = start + 7 * time.day;
-
-            expect(await rewards.calculateRatePerSecond(start, end, amount)).to.equal(rate);
-        });
-
         it('works if pullRewardFromSource() is called multiple times', async function () {
             const { start } = await setupRewards();
             await moveAtTimestamp(start + 7*time.day);
