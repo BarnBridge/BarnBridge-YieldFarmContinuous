@@ -480,6 +480,26 @@ describe('Rewards standalone pool single token', function () {
         });
     });
 
+    describe('withdrawAndClaim',  function () {
+        it('works', async function () {
+            await syPool1.mint(happyPirateAddress, amount);
+            await syPool1.connect(happyPirate).approve(rewards.address, amount);
+            const { start } = await setupRewards();
+
+            await rewards.connect(happyPirate).deposit(amount);
+            expect(await syPool1.balanceOf(happyPirateAddress)).to.equal(0);
+
+            await moveAtTimestamp(start + time.day);
+
+            await rewards.connect(happyPirate).withdrawAndClaim(amount);
+            const multiplier = await rewards.currentMultiplier();
+            const expectedBalance = multiplier.mul(amount).div(helpers.tenPow18);
+
+            expect(await syPool1.balanceOf(happyPirateAddress)).to.equal(amount);
+            expect(await bond.balanceOf(happyPirateAddress)).to.equal(expectedBalance);
+        });
+    });
+
     async function setupUserForWithdraw (syPool1: SmartYieldMock, user: Signer, amount: BigNumber, price: BigNumber) {
         await syPool1.mint(await user.getAddress(), amount);
         await syPool1.connect(user).approve(rewards.address, amount);

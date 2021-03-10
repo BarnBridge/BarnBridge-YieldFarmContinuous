@@ -100,6 +100,11 @@ contract YieldFarmContinuous is Governed {
         return amount;
     }
 
+    function withdrawAndClaim(uint256 amount) public returns (uint256) {
+        withdraw(amount);
+        return claim();
+    }
+
     // ackFunds checks the difference between the last known balance of `token` and the current one
     // if it goes up, the multiplier is re-calculated
     // if it goes down, it only updates the known balance
