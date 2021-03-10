@@ -17,7 +17,6 @@ contract YieldFarmContinuous is Governed {
     IERC20 public poolToken;
     IERC20 public rewardToken;
 
-    uint256 public lastHardPullTs;
     uint256 public rewardNotTransferred;
     uint256 public balanceBefore;
     uint256 public currentMultiplier;
@@ -51,27 +50,31 @@ contract YieldFarmContinuous is Governed {
 
         _calculateOwed(msg.sender);
 
-        balances[msg.sender] = balances[msg.sender].add(amount);
+        uint256 newBalance = balances[msg.sender].add(amount);
+        balances[msg.sender] = newBalance;
         poolSize = poolSize.add(amount);
 
         poolToken.safeTransferFrom(msg.sender, address(this), amount);
 
-        emit Deposit(msg.sender, amount, balances[msg.sender]);
+        emit Deposit(msg.sender, amount, newBalance);
     }
 
     function withdraw(uint256 amount) public {
         require(amount > 0, "amount must be greater than 0");
-        require(balances[msg.sender] >= amount, "insufficient balance");
+
+        uint256 currentBalance = balances[msg.sender];
+        require(currentBalance >= amount, "insufficient balance");
 
         // update the amount owed to the user before doing any change on his balance
         _calculateOwed(msg.sender);
 
-        balances[msg.sender] = balances[msg.sender].sub(amount);
+        uint256 newBalance = currentBalance.sub(amount);
+        balances[msg.sender] = newBalance;
         poolSize = poolSize.sub(amount);
 
         poolToken.safeTransfer(msg.sender, amount);
 
-        emit Withdraw(msg.sender, amount, balances[msg.sender]);
+        emit Withdraw(msg.sender, amount, newBalance);
     }
 
     // claim calculates the currently owed reward and transfers the funds to the user
@@ -90,98 +93,95 @@ contract YieldFarmContinuous is Governed {
         rewardToken.safeTransfer(msg.sender, amount);
 
         // acknowledge the amount that was transferred to the user
-        ackFunds();
+        balanceBefore = rewardToken.balanceOf(address(this)) + rewardNotTransferred;
 
         emit Claim(msg.sender, amount);
 
         return amount;
     }
 
+    function withdrawAndClaim(uint256 amount) public returns (uint256) {
+        withdraw(amount);
+        return claim();
+    }
+
     // ackFunds checks the difference between the last known balance of `token` and the current one
     // if it goes up, the multiplier is re-calculated
     // if it goes down, it only updates the known balance
     function ackFunds() public {
-        uint256 balanceNow = effectiveRewardBalance();
+        uint256 balanceNow = rewardToken.balanceOf(address(this)) + rewardNotTransferred;
+        uint256 balanceBeforeLocal = balanceBefore;
 
-        if (balanceNow == 0 || balanceNow <= balanceBefore) {
+        if (balanceNow <= balanceBeforeLocal || balanceNow == 0) {
             balanceBefore = balanceNow;
             return;
         }
 
         // if there's no bond staked, it doesn't make sense to ackFunds because there's nobody to distribute them to
         // and the calculation would fail anyways due to division by 0
-        if (poolSize == 0) {
+        uint256 poolSizeLocal = poolSize;
+        if (poolSizeLocal == 0) {
             return;
         }
 
-        uint256 diff = balanceNow.sub(balanceBefore);
-        uint256 multiplier = currentMultiplier.add(diff.mul(multiplierScale).div(poolSize));
+        uint256 diff = balanceNow.sub(balanceBeforeLocal);
+        uint256 multiplier = currentMultiplier.add(diff.mul(multiplierScale).div(poolSizeLocal));
 
         balanceBefore = balanceNow;
         currentMultiplier = multiplier;
     }
 
+    // pullRewardFromSource transfers any amount due from the source to this contract so it can be distributed
     function pullRewardFromSource() public {
-        // avoid executing this function multiple times in the same block
-        if (lastHardPullTs == block.timestamp) {
-            return;
-        }
-
         softPullReward();
-
-        // if there's nothing to transfer, stop the execution
-        if (rewardNotTransferred == 0) {
-            return;
-        }
 
         uint256 amountToTransfer = rewardNotTransferred;
 
+        // if there's nothing to transfer, stop the execution
+        if (amountToTransfer == 0) {
+            return;
+        }
+
         rewardNotTransferred = 0;
-        lastHardPullTs = block.timestamp;
 
         rewardToken.safeTransferFrom(rewardSource, address(this), amountToTransfer);
-
-        ackFunds();
     }
 
+    // softPullReward calculates the reward accumulated since the last time it was called but does not actually
+    // execute the transfers. Instead, it adds the amount to rewardNotTransferred variable
     function softPullReward() public override {
-        if (rewardRatePerSecond == 0 || rewardSource == address(0)) {
+        uint256 rate = rewardRatePerSecond;
+        address source = rewardSource;
+
+        // don't execute if the setup was not completed
+        if (rate == 0 || source == address(0)) {
             return;
         }
+
+        uint256 lastPullTs = lastSoftPullTs;
 
         // no need to execute multiple times in the same block
-        if (lastSoftPullTs == block.timestamp) {
+        if (lastPullTs == block.timestamp) {
             return;
         }
 
-        uint256 allowance = rewardToken.allowance(rewardSource, address(this));
+        // if there's no allowance left on the source contract, don't try to pull anything else
+        uint256 allowance = rewardToken.allowance(source, address(this));
         if (allowance == 0 || allowance <= rewardNotTransferred) {
             return;
         }
 
+        uint256 timeSinceLastPull = block.timestamp.sub(lastPullTs);
+        uint256 amountToPull = timeSinceLastPull.mul(rate);
+
+        // only pull the minimum between allowance left and the amount that should be pulled for the period
         uint256 allowanceLeft = allowance - rewardNotTransferred;
-
-        uint256 timeSinceLastPull = block.timestamp.sub(lastSoftPullTs);
-        uint256 amountToPull = timeSinceLastPull.mul(rewardRatePerSecond);
-
         if (amountToPull > allowanceLeft) {
             amountToPull = allowanceLeft;
         }
 
         rewardNotTransferred = rewardNotTransferred + amountToPull;
         lastSoftPullTs = block.timestamp;
-    }
-
-    function effectiveRewardBalance() public view returns (uint256) {
-        uint256 actualBalance = rewardToken.balanceOf(address(this));
-
-        return actualBalance + rewardNotTransferred;
-    }
-
-    function calculateRatePerSecond(uint256 startTs, uint256 endTs, uint256 amount) public pure returns (uint256) {
-        uint256 totalDuration = endTs.sub(startTs);
-
-        return amount.div(totalDuration);
     }
 
     // _calculateOwed calculates and updates the total amount that is owed to an user and updates the user's multiplier

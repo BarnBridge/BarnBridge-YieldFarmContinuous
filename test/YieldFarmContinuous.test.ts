@@ -84,15 +84,6 @@ describe('Rewards standalone pool single token', function () {
             expect((await rewards.rewardRatePerSecond())).to.equal(rate);
         });
 
-        it('returns correct result on calculateRatePerSecond', async function () {
-            const rate = amount.div(7 * 24 * 60 * 60);
-
-            const start = Math.floor(Date.now() / 1000);
-            const end = start + 7 * time.day;
-
-            expect(await rewards.calculateRatePerSecond(start, end, amount)).to.equal(rate);
-        });
-
         it('works if pullRewardFromSource() is called multiple times', async function () {
             const { start } = await setupRewards();
             await moveAtTimestamp(start + 7*time.day);
@@ -486,6 +477,26 @@ describe('Rewards standalone pool single token', function () {
                 expectedReward3.gt(BigNumber.from(9).mul(helpers.tenPow18)) &&
                 expectedReward3.lt(BigNumber.from(10).mul(helpers.tenPow18))).to.be.true;
             expect(await bond.balanceOf(flyingParrotAddress)).to.equal(expectedReward3);
+        });
+    });
+
+    describe('withdrawAndClaim',  function () {
+        it('works', async function () {
+            await syPool1.mint(happyPirateAddress, amount);
+            await syPool1.connect(happyPirate).approve(rewards.address, amount);
+            const { start } = await setupRewards();
+
+            await rewards.connect(happyPirate).deposit(amount);
+            expect(await syPool1.balanceOf(happyPirateAddress)).to.equal(0);
+
+            await moveAtTimestamp(start + time.day);
+
+            await rewards.connect(happyPirate).withdrawAndClaim(amount);
+            const multiplier = await rewards.currentMultiplier();
+            const expectedBalance = multiplier.mul(amount).div(helpers.tenPow18);
+
+            expect(await syPool1.balanceOf(happyPirateAddress)).to.equal(amount);
+            expect(await bond.balanceOf(happyPirateAddress)).to.equal(expectedBalance);
         });
     });
 
