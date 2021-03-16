@@ -10,12 +10,17 @@ contract PoolFactory is Ownable {
 
     event PoolCreated(address pool);
 
-    function deployPool(address _owner, address _rewardToken, address _poolToken) public returns (address) {
+    function deployPool(address _owner, address _rewardToken, address _poolToken, address rewardSource, uint256 rewardRatePerSecond) public returns (address) {
         require(msg.sender == owner(), "only owner can call");
 
-        YieldFarmContinuous pool = new YieldFarmContinuous(_owner, _rewardToken, _poolToken);
+        YieldFarmContinuous pool = new YieldFarmContinuous(address(this), _rewardToken, _poolToken);
         pools.push(pool);
         numberOfPools++;
+
+        pool.setRewardsSource(rewardSource);
+        pool.setRewardRatePerSecond(rewardRatePerSecond);
+
+        pool.transferOwnership(_owner);
 
         emit PoolCreated(address(pool));
 
