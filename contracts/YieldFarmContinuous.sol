@@ -33,6 +33,7 @@ contract YieldFarmContinuous is Governed {
 
     constructor(address _owner, address _rewardToken, address _poolToken) {
         require(_rewardToken != address(0), "reward token must not be 0x0");
+        require(_poolToken != address(0), "pool token must not be 0x0");
 
         transferOwnership(_owner);
 
@@ -48,6 +49,8 @@ contract YieldFarmContinuous is Governed {
             "allowance must be greater than 0"
         );
 
+        // it is important to calculate the amount owed to the user before doing any changes
+        // to the user's balance or the pool's size
         _calculateOwed(msg.sender);
 
         uint256 newBalance = balances[msg.sender].add(amount);
@@ -65,7 +68,8 @@ contract YieldFarmContinuous is Governed {
         uint256 currentBalance = balances[msg.sender];
         require(currentBalance >= amount, "insufficient balance");
 
-        // update the amount owed to the user before doing any change on his balance
+        // it is important to calculate the amount owed to the user before doing any changes
+        // to the user's balance or the pool's size
         _calculateOwed(msg.sender);
 
         uint256 newBalance = currentBalance.sub(amount);
@@ -82,8 +86,12 @@ contract YieldFarmContinuous is Governed {
         _calculateOwed(msg.sender);
 
         uint256 amount = owed[msg.sender];
-        require(amount > 0, "nothing to claim");
+        if (amount == 0) {
+            return 0;
+        }
 
+        // check if there's enough balance to distribute the amount owed to the user
+        // otherwise, pull the rewardNotTransferred from source
         if (rewardToken.balanceOf(address(this)) < amount) {
             pullRewardFromSource();
         }
@@ -93,7 +101,7 @@ contract YieldFarmContinuous is Governed {
         rewardToken.safeTransfer(msg.sender, amount);
 
         // acknowledge the amount that was transferred to the user
-        balanceBefore = rewardToken.balanceOf(address(this)) + rewardNotTransferred;
+        balanceBefore = balanceBefore.sub(amount);
 
         emit Claim(msg.sender, amount);
 
@@ -109,7 +117,7 @@ contract YieldFarmContinuous is Governed {
     // if it goes up, the multiplier is re-calculated
     // if it goes down, it only updates the known balance
     function ackFunds() public {
-        uint256 balanceNow = rewardToken.balanceOf(address(this)) + rewardNotTransferred;
+        uint256 balanceNow = rewardToken.balanceOf(address(this)).add(rewardNotTransferred);
         uint256 balanceBeforeLocal = balanceBefore;
 
         if (balanceNow <= balanceBeforeLocal || balanceNow == 0) {
@@ -150,18 +158,18 @@ contract YieldFarmContinuous is Governed {
     // softPullReward calculates the reward accumulated since the last time it was called but does not actually
     // execute the transfers. Instead, it adds the amount to rewardNotTransferred variable
     function softPullReward() public override {
+        uint256 lastPullTs = lastSoftPullTs;
+
+        // no need to execute multiple times in the same block
+        if (lastPullTs == block.timestamp) {
+            return;
+        }
+
         uint256 rate = rewardRatePerSecond;
         address source = rewardSource;
 
         // don't execute if the setup was not completed
         if (rate == 0 || source == address(0)) {
-            return;
-        }
-
-        uint256 lastPullTs = lastSoftPullTs;
-
-        // no need to execute multiple times in the same block
-        if (lastPullTs == block.timestamp) {
             return;
         }
 
@@ -175,12 +183,12 @@ contract YieldFarmContinuous is Governed {
         uint256 amountToPull = timeSinceLastPull.mul(rate);
 
         // only pull the minimum between allowance left and the amount that should be pulled for the period
-        uint256 allowanceLeft = allowance - rewardNotTransferred;
+        uint256 allowanceLeft = allowance.sub(rewardNotTransferred);
         if (amountToPull > allowanceLeft) {
             amountToPull = allowanceLeft;
         }
 
-        rewardNotTransferred = rewardNotTransferred + amountToPull;
+        rewardNotTransferred = rewardNotTransferred.add(amountToPull);
         lastSoftPullTs = block.timestamp;
     }
 
