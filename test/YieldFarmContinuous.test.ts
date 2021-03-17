@@ -326,10 +326,6 @@ describe('Rewards standalone pool single token', function () {
     });
 
     describe('claim', function () {
-        it('reverts if user has nothing to claim', async function () {
-            await expect(rewards.connect(happyPirate).claim()).to.be.revertedWith('nothing to claim');
-        });
-
         it('transfers the amount to user', async function () {
             await syPool1.mint(happyPirateAddress, amount.mul(2));
             await syPool1.connect(happyPirate).approve(rewards.address, amount.mul(2));
@@ -477,6 +473,56 @@ describe('Rewards standalone pool single token', function () {
                 expectedReward3.gt(BigNumber.from(9).mul(helpers.tenPow18)) &&
                 expectedReward3.lt(BigNumber.from(10).mul(helpers.tenPow18))).to.be.true;
             expect(await bond.balanceOf(flyingParrotAddress)).to.equal(expectedReward3);
+        });
+
+        it('first user gets all reward', async function () {
+            await syPool1.mint(happyPirateAddress, amount.mul(2));
+            await syPool1.connect(happyPirate).approve(rewards.address, amount.mul(2));
+            const { start } = await setupRewards();
+
+            // move one day into the future
+            await moveAtTimestamp(start + time.day);
+
+            await rewards.connect(happyPirate).deposit(amount);
+
+            // claim immediately after the first deposit. This should reward the user with all the amount accumulated
+            // in the first day which should be about 14.28
+            await rewards.connect(happyPirate).claim();
+
+            const userBalance = await bond.balanceOf(happyPirateAddress);
+            expect(userBalance.gte(tenPow18.mul(14))).to.be.true;
+            expect(userBalance.lte(tenPow18.mul(15))).to.be.true;
+        });
+
+        it('first user gets all reward after all withdraw', async function () {
+            await syPool1.mint(happyPirateAddress, amount.mul(2));
+            await syPool1.connect(happyPirate).approve(rewards.address, amount.mul(2));
+            const { start } = await setupRewards();
+
+            // move one day into the future
+            await rewards.connect(happyPirate).deposit(amount);
+
+            await moveAtTimestamp(start + time.day);
+            await rewards.connect(happyPirate).withdraw(amount);
+
+            await moveAtTimestamp(start + 2*time.day);
+            await rewards.connect(happyPirate).claim();
+
+            // the user only gets the reward for the first day that they were staked into the pool
+            let userBalance = await bond.balanceOf(happyPirateAddress);
+            expect(userBalance.gte(tenPow18.mul(14))).to.be.true;
+            expect(userBalance.lte(tenPow18.mul(15))).to.be.true;
+
+            expect(await rewards.poolSize()).to.equal(0);
+
+            await rewards.connect(happyPirate).deposit(amount);
+            await rewards.connect(happyPirate).claim();
+
+            // user should also receive the reward that was not distributed because nobody was in the pool
+            // so their balance should be 14.28 * 2 days = ~28.57
+            userBalance = await bond.balanceOf(happyPirateAddress);
+            expect(userBalance.gte(tenPow18.mul(2857).div(100))).to.be.true;
+            expect(userBalance.lte(tenPow18.mul(2858).div(100))).to.be.true;
         });
     });
 
