@@ -12,7 +12,7 @@ contract SmartYieldMock is ERC20("jToken", "MCK") {
 
     uint256 public price = 0;
 
-    constructor (uint8 decimals) public {
+    constructor (uint8 decimals) {
         _setupDecimals(decimals);
     }
 

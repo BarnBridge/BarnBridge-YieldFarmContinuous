@@ -20,8 +20,8 @@ abstract contract Governed is Ownable {
     function setRewardRatePerSecond(uint256 rate) public {
         require(msg.sender == owner(), "only owner can call");
 
-        // soft pull everything due until now to not be affected by the change in rate
-        softPullReward();
+        // pull everything due until now to not be affected by the change in rate
+        pullRewardFromSource();
 
         rewardRatePerSecond = rate;
 
@@ -31,5 +31,5 @@ abstract contract Governed is Ownable {
         }
     }
 
-    function softPullReward() public virtual;
+    function pullRewardFromSource() public virtual;
 }
