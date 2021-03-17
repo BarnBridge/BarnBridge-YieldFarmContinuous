@@ -10,7 +10,7 @@ contract PoolFactory is Ownable {
 
     event PoolCreated(address pool);
 
-    constructor(address _owner) public {
+    constructor(address _owner) {
         transferOwnership(_owner);
     }
 

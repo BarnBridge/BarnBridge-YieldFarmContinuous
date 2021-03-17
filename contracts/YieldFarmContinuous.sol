@@ -140,7 +140,7 @@ contract YieldFarmContinuous is Governed {
     }
 
     // pullRewardFromSource transfers any amount due from the source to this contract so it can be distributed
-    function pullRewardFromSource() public {
+    function pullRewardFromSource() public override {
         softPullReward();
 
         uint256 amountToTransfer = rewardNotTransferred;
@@ -157,7 +157,7 @@ contract YieldFarmContinuous is Governed {
 
     // softPullReward calculates the reward accumulated since the last time it was called but does not actually
     // execute the transfers. Instead, it adds the amount to rewardNotTransferred variable
-    function softPullReward() public override {
+    function softPullReward() public {
         uint256 lastPullTs = lastSoftPullTs;
 
         // no need to execute multiple times in the same block
