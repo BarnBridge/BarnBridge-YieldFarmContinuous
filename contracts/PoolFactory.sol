@@ -10,6 +10,10 @@ contract PoolFactory is Ownable {
 
     event PoolCreated(address pool);
 
+    constructor(address _owner) public {
+        transferOwnership(_owner);
+    }
+
     function deployPool(address _owner, address _rewardToken, address _poolToken, address rewardSource, uint256 rewardRatePerSecond) public returns (address) {
         require(msg.sender == owner(), "only owner can call");
 

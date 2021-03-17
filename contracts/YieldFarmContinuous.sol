@@ -192,6 +192,14 @@ contract YieldFarmContinuous is Governed {
         lastSoftPullTs = block.timestamp;
     }
 
+    // rewardLeft returns the amount that was not yet distributed
+    // even though it is not a view, this function is only intended for external use
+    function rewardLeft() external returns (uint256) {
+        softPullReward();
+
+        return rewardToken.allowance(rewardSource, address(this)).sub(rewardNotTransferred);
+    }
+
     // _calculateOwed calculates and updates the total amount that is owed to an user and updates the user's multiplier
     // to the current value
     // it automatically attempts to pull the token from the source and acknowledge the funds

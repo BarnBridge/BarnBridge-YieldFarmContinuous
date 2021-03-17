@@ -22,8 +22,7 @@ describe('PoolFactory', function () {
         bond = (await deploy.deployContract('ERC20Mock')) as Erc20Mock;
         syPool1 = (await deploy.deployContract('SmartYieldMock', [6])) as SmartYieldMock;
 
-        factory = (await deployContract('PoolFactory')) as PoolFactory;
-        await factory.transferOwnership(await dao.getAddress());
+        factory = (await deployContract('PoolFactory', [await dao.getAddress()])) as PoolFactory;
     });
 
     beforeEach(async function () {
