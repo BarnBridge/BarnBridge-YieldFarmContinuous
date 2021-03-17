@@ -36,7 +36,7 @@ const cfg: HardhatUserConfig = {
     etherscan: config.etherscan,
 
     abiExporter: {
-        only: ['YieldFarmContinuous'],
+        only: ['PoolFactory','YieldFarmContinuous'],
         except: ['.*Mock$'],
         clear: true,
         flat: true,
