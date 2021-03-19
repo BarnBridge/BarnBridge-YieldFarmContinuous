@@ -2,7 +2,7 @@ import { ethers } from 'ethers';
 import { contractAt } from '../test/helpers/helpers';
 import { PoolFactory } from '../typechain';
 
-const _factory = '0xA13dDdC3CD3f6B18F9152E0CA18922538069f879';
+const _factory = '0x2e93403C675Ccb9C564edf2dC6001233d0650582';
 
 async function main () {
     const factory = (await contractAt('PoolFactory', _factory)) as PoolFactory;
