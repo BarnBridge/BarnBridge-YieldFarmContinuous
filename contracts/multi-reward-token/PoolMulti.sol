@@ -89,32 +89,6 @@ contract PoolMulti is GovernedMulti, ReentrancyGuard {
         return _claim(token);
     }
 
-    function _claim(address token) internal returns (uint256) {
-        _calculateOwed(msg.sender);
-
-        uint256 amount = owed[msg.sender][token];
-        if (amount == 0) {
-            return 0;
-        }
-
-        // check if there's enough balance to distribute the amount owed to the user
-        // otherwise, pull the rewardNotTransferred from source
-        if (IERC20(token).balanceOf(address(this)) < amount) {
-            pullRewardFromSource(token);
-        }
-
-        owed[msg.sender][token] = 0;
-
-        IERC20(token).safeTransfer(msg.sender, amount);
-
-        // acknowledge the amount that was transferred to the user
-        balancesBefore[token] = balancesBefore[token].sub(amount);
-
-        emit ClaimRewardToken(msg.sender, token, amount);
-
-        return amount;
-    }
-
     function withdrawAndClaim(uint256 amount) public {
         withdraw(amount);
         claim_allTokens();
@@ -248,5 +222,31 @@ contract PoolMulti is GovernedMulti, ReentrancyGuard {
         uint256 multiplier = currentMultipliers[token].sub(userMultipliers[user][token]);
 
         return balances[user].mul(multiplier).div(multiplierScale);
+    }
+
+    function _claim(address token) internal returns (uint256) {
+        _calculateOwed(msg.sender);
+
+        uint256 amount = owed[msg.sender][token];
+        if (amount == 0) {
+            return 0;
+        }
+
+        // check if there's enough balance to distribute the amount owed to the user
+        // otherwise, pull the rewardNotTransferred from source
+        if (IERC20(token).balanceOf(address(this)) < amount) {
+            pullRewardFromSource(token);
+        }
+
+        owed[msg.sender][token] = 0;
+
+        IERC20(token).safeTransfer(msg.sender, amount);
+
+        // acknowledge the amount that was transferred to the user
+        balancesBefore[token] = balancesBefore[token].sub(amount);
+
+        emit ClaimRewardToken(msg.sender, token, amount);
+
+        return amount;
     }
 }
