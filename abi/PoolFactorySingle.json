@@ -118,7 +118,7 @@
     "name": "pools",
     "outputs": [
       {
-        "internalType": "contract YieldFarmContinuous",
+        "internalType": "contract PoolSingle",
         "name": "",
         "type": "address"
       }

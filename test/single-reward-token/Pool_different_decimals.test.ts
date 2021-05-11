@@ -1,18 +1,18 @@
 import { ethers } from 'hardhat';
 import { BigNumber, Signer } from 'ethers';
-import * as helpers from './helpers/helpers';
-import { getLatestBlockTimestamp, moveAtTimestamp, tenPow18 } from './helpers/helpers';
+import * as helpers from '../helpers/helpers';
+import { getLatestBlockTimestamp, moveAtTimestamp, tenPow18 } from '../helpers/helpers';
 import { expect } from 'chai';
-import { Erc20Mock, YieldFarmContinuous, SmartYieldMock } from '../typechain';
-import * as deploy from './helpers/deploy';
-import * as time from './helpers/time';
+import { Erc20Mock, PoolSingle } from '../../typechain';
+import * as deploy from '../helpers/deploy';
+import * as time from '../helpers/time';
 
 describe('Rewards standalone pool single token different decimals', function () {
     const rewardsAmount18Dec = BigNumber.from(100).mul(BigNumber.from(10).pow(18));
     const amount6Dec = BigNumber.from(100).mul(BigNumber.from(10).pow(6));
 
-    let bond: Erc20Mock, rewards: YieldFarmContinuous;
-    let syPool1: SmartYieldMock;
+    let bond: Erc20Mock, rewards: PoolSingle;
+    let syPool1: Erc20Mock;
 
     let user: Signer, userAddress: string;
     let communityVault: Signer, dao: Signer;
@@ -21,16 +21,16 @@ describe('Rewards standalone pool single token different decimals', function () 
     let snapshotTs: number;
 
     before(async function () {
-        bond = (await deploy.deployContract('ERC20Mock')) as Erc20Mock;
-        syPool1 = (await deploy.deployContract('SmartYieldMock', [6])) as SmartYieldMock;
+        bond = (await deploy.deployContract('ERC20Mock', [18])) as Erc20Mock;
+        syPool1 = (await deploy.deployContract('ERC20Mock', [6])) as Erc20Mock;
 
         await setupSigners();
         await setupContracts();
 
         rewards = (await deploy.deployContract(
-            'YieldFarmContinuous',
+            'PoolSingle',
             [await dao.getAddress(), bond.address, syPool1.address])
-        ) as YieldFarmContinuous;
+        ) as PoolSingle;
     });
 
     beforeEach(async function () {

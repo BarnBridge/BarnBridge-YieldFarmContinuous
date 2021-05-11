@@ -5,39 +5,36 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "./interfaces/ISmartYield.sol";
-import "./Governed.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "./GovernedMulti.sol";
 
-contract YieldFarmContinuous is Governed {
+contract PoolMulti is GovernedMulti, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
     uint256 constant multiplierScale = 10 ** 18;
 
     IERC20 public poolToken;
-    IERC20 public rewardToken;
 
-    uint256 public rewardNotTransferred;
-    uint256 public balanceBefore;
-    uint256 public currentMultiplier;
+    mapping(address => uint256) public rewardsNotTransferred;
+    mapping(address => uint256) public balancesBefore;
+    mapping(address => uint256) public currentMultipliers;
 
     mapping(address => uint256) public balances;
-    mapping(address => uint256) public userMultiplier;
-    mapping(address => uint256) public owed;
+    mapping(address => mapping(address => uint256)) public userMultipliers;
+    mapping(address => mapping(address => uint256)) public owed;
 
     uint256 public poolSize;
 
-    event Claim(address indexed user, uint256 amount);
+    event ClaimRewardToken(address indexed user, address token, uint256 amount);
     event Deposit(address indexed user, uint256 amount, uint256 balanceAfter);
     event Withdraw(address indexed user, uint256 amount, uint256 balanceAfter);
 
-    constructor(address _owner, address _rewardToken, address _poolToken) {
-        require(_rewardToken != address(0), "reward token must not be 0x0");
+    constructor(address _owner, address _poolToken) {
         require(_poolToken != address(0), "pool token must not be 0x0");
 
         transferOwnership(_owner);
 
-        rewardToken = IERC20(_rewardToken);
         poolToken = IERC20(_poolToken);
     }
 
@@ -81,47 +78,63 @@ contract YieldFarmContinuous is Governed {
         emit Withdraw(msg.sender, amount, newBalance);
     }
 
+    function claim_allTokens() public nonReentrant {
+        for (uint256 i = 0; i < rewardTokens.length; i++) {
+            _claim(address(rewardTokens[i]));
+        }
+    }
+
     // claim calculates the currently owed reward and transfers the funds to the user
-    function claim() public returns (uint256){
+    function claim(address token) public nonReentrant returns (uint256){
+        return _claim(token);
+    }
+
+    function _claim(address token) internal returns (uint256) {
         _calculateOwed(msg.sender);
 
-        uint256 amount = owed[msg.sender];
+        uint256 amount = owed[msg.sender][token];
         if (amount == 0) {
             return 0;
         }
 
         // check if there's enough balance to distribute the amount owed to the user
         // otherwise, pull the rewardNotTransferred from source
-        if (rewardToken.balanceOf(address(this)) < amount) {
-            pullRewardFromSource();
+        if (IERC20(token).balanceOf(address(this)) < amount) {
+            pullRewardFromSource(token);
         }
 
-        owed[msg.sender] = 0;
+        owed[msg.sender][token] = 0;
 
-        rewardToken.safeTransfer(msg.sender, amount);
+        IERC20(token).safeTransfer(msg.sender, amount);
 
         // acknowledge the amount that was transferred to the user
-        balanceBefore = balanceBefore.sub(amount);
+        balancesBefore[token] = balancesBefore[token].sub(amount);
 
-        emit Claim(msg.sender, amount);
+        emit ClaimRewardToken(msg.sender, token, amount);
 
         return amount;
     }
 
-    function withdrawAndClaim(uint256 amount) public returns (uint256) {
+    function withdrawAndClaim(uint256 amount) public {
         withdraw(amount);
-        return claim();
+        claim_allTokens();
+    }
+
+    function ackFunds_allTokens() public {
+        for (uint256 i = 0; i < rewardTokens.length; i++) {
+            ackFunds(address(rewardTokens[i]));
+        }
     }
 
     // ackFunds checks the difference between the last known balance of `token` and the current one
     // if it goes up, the multiplier is re-calculated
     // if it goes down, it only updates the known balance
-    function ackFunds() public {
-        uint256 balanceNow = rewardToken.balanceOf(address(this)).add(rewardNotTransferred);
-        uint256 balanceBeforeLocal = balanceBefore;
+    function ackFunds(address token) public {
+        uint256 balanceNow = IERC20(token).balanceOf(address(this)).add(rewardsNotTransferred[token]);
+        uint256 balanceBeforeLocal = balancesBefore[token];
 
         if (balanceNow <= balanceBeforeLocal || balanceNow == 0) {
-            balanceBefore = balanceNow;
+            balancesBefore[token] = balanceNow;
             return;
         }
 
@@ -133,40 +146,52 @@ contract YieldFarmContinuous is Governed {
         }
 
         uint256 diff = balanceNow.sub(balanceBeforeLocal);
-        uint256 multiplier = currentMultiplier.add(diff.mul(multiplierScale).div(poolSizeLocal));
+        uint256 multiplier = currentMultipliers[token].add(diff.mul(multiplierScale).div(poolSizeLocal));
 
-        balanceBefore = balanceNow;
-        currentMultiplier = multiplier;
+        balancesBefore[token] = balanceNow;
+        currentMultipliers[token] = multiplier;
+    }
+
+    function pullRewardFromSource_allTokens() public {
+        for (uint256 i = 0; i < rewardTokens.length; i++) {
+            pullRewardFromSource(address(rewardTokens[i]));
+        }
     }
 
     // pullRewardFromSource transfers any amount due from the source to this contract so it can be distributed
-    function pullRewardFromSource() public override {
-        softPullReward();
+    function pullRewardFromSource(address token) public override {
+        softPullReward(token);
 
-        uint256 amountToTransfer = rewardNotTransferred;
+        uint256 amountToTransfer = rewardsNotTransferred[token];
 
         // if there's nothing to transfer, stop the execution
         if (amountToTransfer == 0) {
             return;
         }
 
-        rewardNotTransferred = 0;
+        rewardsNotTransferred[token] = 0;
 
-        rewardToken.safeTransferFrom(rewardSource, address(this), amountToTransfer);
+        IERC20(token).safeTransferFrom(rewardSources[token], address(this), amountToTransfer);
+    }
+
+    function softPullReward_allTokens() internal {
+        for (uint256 i = 0; i < rewardTokens.length; i++) {
+            softPullReward(address(rewardTokens[i]));
+        }
     }
 
     // softPullReward calculates the reward accumulated since the last time it was called but does not actually
     // execute the transfers. Instead, it adds the amount to rewardNotTransferred variable
-    function softPullReward() public {
-        uint256 lastPullTs = lastSoftPullTs;
+    function softPullReward(address token) internal {
+        uint256 lastPullTs = lastSoftPullTs[token];
 
         // no need to execute multiple times in the same block
         if (lastPullTs == block.timestamp) {
             return;
         }
 
-        uint256 rate = rewardRatePerSecond;
-        address source = rewardSource;
+        uint256 rate = rewardRatesPerSecond[token];
+        address source = rewardSources[token];
 
         // don't execute if the setup was not completed
         if (rate == 0 || source == address(0)) {
@@ -174,7 +199,8 @@ contract YieldFarmContinuous is Governed {
         }
 
         // if there's no allowance left on the source contract, don't try to pull anything else
-        uint256 allowance = rewardToken.allowance(source, address(this));
+        uint256 allowance = IERC20(token).allowance(source, address(this));
+        uint256 rewardNotTransferred = rewardsNotTransferred[token];
         if (allowance == 0 || allowance <= rewardNotTransferred) {
             return;
         }
@@ -188,35 +214,38 @@ contract YieldFarmContinuous is Governed {
             amountToPull = allowanceLeft;
         }
 
-        rewardNotTransferred = rewardNotTransferred.add(amountToPull);
-        lastSoftPullTs = block.timestamp;
+        rewardsNotTransferred[token] = rewardNotTransferred.add(amountToPull);
+        lastSoftPullTs[token] = block.timestamp;
     }
 
     // rewardLeft returns the amount that was not yet distributed
     // even though it is not a view, this function is only intended for external use
-    function rewardLeft() external returns (uint256) {
-        softPullReward();
+    function rewardLeft(address token) external returns (uint256) {
+        softPullReward(token);
 
-        return rewardToken.allowance(rewardSource, address(this)).sub(rewardNotTransferred);
+        return IERC20(token).allowance(rewardSources[token], address(this)).sub(rewardsNotTransferred[token]);
     }
 
     // _calculateOwed calculates and updates the total amount that is owed to an user and updates the user's multiplier
     // to the current value
     // it automatically attempts to pull the token from the source and acknowledge the funds
     function _calculateOwed(address user) internal {
-        softPullReward();
-        ackFunds();
+        softPullReward_allTokens();
+        ackFunds_allTokens();
 
-        uint256 reward = _userPendingReward(user);
+        for (uint256 i = 0; i < rewardTokens.length; i++) {
+            address token = address(rewardTokens[i]);
+            uint256 reward = _userPendingReward(user, token);
 
-        owed[user] = owed[user].add(reward);
-        userMultiplier[user] = currentMultiplier;
+            owed[user][token] = owed[user][token].add(reward);
+            userMultipliers[user][token] = currentMultipliers[token];
+        }
     }
 
     // _userPendingReward calculates the reward that should be based on the current multiplier / anything that's not included in the `owed[user]` value
     // it does not represent the entire reward that's due to the user unless added on top of `owed[user]`
-    function _userPendingReward(address user) internal view returns (uint256) {
-        uint256 multiplier = currentMultiplier.sub(userMultiplier[user]);
+    function _userPendingReward(address user, address token) internal view returns (uint256) {
+        uint256 multiplier = currentMultipliers[token].sub(userMultipliers[user][token]);
 
         return balances[user].mul(multiplier).div(multiplierScale);
     }

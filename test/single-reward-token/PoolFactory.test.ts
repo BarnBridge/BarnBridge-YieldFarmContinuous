@@ -1,10 +1,10 @@
 import { ethers } from 'hardhat';
-import * as helpers from './helpers/helpers';
-import { contractAt, zeroAddress } from './helpers/helpers';
+import * as helpers from '../helpers/helpers';
+import { contractAt, zeroAddress } from '../helpers/helpers';
 import { expect } from 'chai';
-import { Erc20Mock, PoolFactory, SmartYieldMock, YieldFarmContinuous } from '../typechain';
-import * as deploy from './helpers/deploy';
-import { deployContract } from './helpers/deploy';
+import { Erc20Mock, PoolFactorySingle, PoolSingle } from '../../typechain';
+import * as deploy from '../helpers/deploy';
+import { deployContract } from '../helpers/deploy';
 import { Signer } from 'ethers';
 
 describe('PoolFactory', function () {
@@ -13,16 +13,16 @@ describe('PoolFactory', function () {
 
     let dao: Signer, happyPirate: Signer, cv: Signer;
     let cvAddress: string;
-    let factory: PoolFactory;
-    let bond: Erc20Mock, syPool1: SmartYieldMock;
+    let factory: PoolFactorySingle;
+    let bond: Erc20Mock, syPool1: Erc20Mock;
 
     before(async function () {
         await setupSigners();
 
-        bond = (await deploy.deployContract('ERC20Mock')) as Erc20Mock;
-        syPool1 = (await deploy.deployContract('SmartYieldMock', [6])) as SmartYieldMock;
+        bond = (await deploy.deployContract('ERC20Mock', [18])) as Erc20Mock;
+        syPool1 = (await deploy.deployContract('ERC20Mock', [6])) as Erc20Mock;
 
-        factory = (await deployContract('PoolFactory', [await dao.getAddress()])) as PoolFactory;
+        factory = (await deployContract('PoolFactorySingle', [await dao.getAddress()])) as PoolFactorySingle;
     });
 
     beforeEach(async function () {
@@ -69,7 +69,7 @@ describe('PoolFactory', function () {
             expect(poolAddr).to.have.length(42);
 
             // eslint-disable-next-line max-len
-            const pool: YieldFarmContinuous = (await contractAt('YieldFarmContinuous', poolAddr)) as YieldFarmContinuous;
+            const pool: PoolSingle = (await contractAt('PoolSingle', poolAddr)) as PoolSingle;
             expect(await pool.owner()).to.equal(await dao.getAddress());
             expect(await pool.rewardRatePerSecond()).to.equal(1);
             expect(await pool.rewardSource()).to.equal(cvAddress);

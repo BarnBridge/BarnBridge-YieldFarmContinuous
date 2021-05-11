@@ -1,18 +1,18 @@
 import { ethers } from 'hardhat';
 import { BigNumber, BigNumberish, Signer } from 'ethers';
-import * as helpers from './helpers/helpers';
-import { getLatestBlockTimestamp, moveAtTimestamp, tenPow18 } from './helpers/helpers';
+import * as helpers from '../helpers/helpers';
+import { getLatestBlockTimestamp, moveAtTimestamp, tenPow18 } from '../helpers/helpers';
 import { expect } from 'chai';
-import { Erc20Mock, MultiCall, SmartYieldMock, YieldFarmContinuous } from '../typechain';
-import * as deploy from './helpers/deploy';
-import { deployContract } from './helpers/deploy';
-import * as time from './helpers/time';
+import { Erc20Mock, MultiCallSingle, PoolSingle } from '../../typechain';
+import * as deploy from '../helpers/deploy';
+import { deployContract } from '../helpers/deploy';
+import * as time from '../helpers/time';
 
 describe('Rewards standalone pool single token', function () {
     const amount = BigNumber.from(100).mul(BigNumber.from(10).pow(18));
 
-    let bond: Erc20Mock, rewards: YieldFarmContinuous;
-    let syPool1: SmartYieldMock;
+    let bond: Erc20Mock, rewards: PoolSingle;
+    let syPool1: Erc20Mock;
 
     let user: Signer, userAddress: string;
     let happyPirate: Signer, happyPirateAddress: string;
@@ -25,16 +25,16 @@ describe('Rewards standalone pool single token', function () {
     let snapshotTs: number;
 
     before(async function () {
-        bond = (await deploy.deployContract('ERC20Mock')) as Erc20Mock;
-        syPool1 = (await deploy.deployContract('SmartYieldMock', [18])) as SmartYieldMock;
+        bond = (await deploy.deployContract('ERC20Mock', [18])) as Erc20Mock;
+        syPool1 = (await deploy.deployContract('ERC20Mock', [18])) as Erc20Mock;
 
         await setupSigners();
         await setupContracts();
 
         rewards = (await deploy.deployContract(
-            'YieldFarmContinuous',
+            'PoolSingle',
             [await dao.getAddress(), bond.address, syPool1.address])
-        ) as YieldFarmContinuous;
+        ) as PoolSingle;
     });
 
     beforeEach(async function () {
@@ -88,7 +88,7 @@ describe('Rewards standalone pool single token', function () {
             const { start } = await setupRewards();
             await moveAtTimestamp(start + 7 * time.day);
 
-            const m = (await deployContract('MultiCall')) as MultiCall;
+            const m = (await deployContract('MultiCallSingle')) as MultiCallSingle;
             await expect(m.call_pullRewardFromSource(rewards.address)).to.not.be.reverted;
 
             expect(await bond.balanceOf(rewards.address)).to.equal(amount);
@@ -241,14 +241,14 @@ describe('Rewards standalone pool single token', function () {
         });
 
         it('reverts if user does not have enough balance', async function () {
-            await setupUserForWithdraw(syPool1, user, amount, tenPow18);
+            await setupUserForWithdraw(syPool1, user, amount);
 
             await expect(rewards.connect(user).withdraw(amount.mul(2)))
                 .to.be.revertedWith('insufficient balance');
         });
 
         it('updates user balance', async function () {
-            await setupUserForWithdraw(syPool1, user, amount, tenPow18);
+            await setupUserForWithdraw(syPool1, user, amount);
 
             await expect(rewards.connect(user).withdraw(amount))
                 .to.not.be.reverted;
@@ -261,7 +261,7 @@ describe('Rewards standalone pool single token', function () {
         });
 
         it('updates the pool size', async function () {
-            await setupUserForWithdraw(syPool1, user, amount, tenPow18);
+            await setupUserForWithdraw(syPool1, user, amount);
 
             await expect(rewards.connect(user).withdraw(amount))
                 .to.not.be.reverted;
@@ -270,7 +270,7 @@ describe('Rewards standalone pool single token', function () {
         });
 
         it('emits Withdraw event', async function () {
-            await setupUserForWithdraw(syPool1, user, amount, tenPow18);
+            await setupUserForWithdraw(syPool1, user, amount);
 
             await expect(rewards.connect(user).withdraw(amount))
                 .to.emit(rewards, 'Withdraw')
@@ -656,7 +656,7 @@ describe('Rewards standalone pool single token', function () {
         return poolMultiplier.sub(multiplier).mul(userBalance).div(tenPow18);
     }
 
-    async function setupUserForWithdraw (syPool1: SmartYieldMock, user: Signer, amount: BigNumber, price: BigNumber) {
+    async function setupUserForWithdraw (syPool1: Erc20Mock, user: Signer, amount: BigNumber) {
         await syPool1.mint(await user.getAddress(), amount);
         await syPool1.connect(user).approve(rewards.address, amount);
         await rewards.connect(user).deposit(amount);
