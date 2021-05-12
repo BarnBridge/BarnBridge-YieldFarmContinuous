@@ -7,6 +7,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 abstract contract GovernedMulti is Ownable {
     IERC20[] public rewardTokens;
+    IERC20 public poolToken;
+
     uint256 public numRewardTokens;
     mapping(address => address) public rewardSources;
     mapping(address => uint256) public rewardRatesPerSecond;
@@ -16,6 +18,7 @@ abstract contract GovernedMulti is Ownable {
     function approveNewRewardToken(address token) public {
         require(msg.sender == owner(), "only owner can call");
         require(!isApprovedToken(token), "token already approved");
+        require(token != address(poolToken), "reward token and pool token must be different");
 
         rewardTokens.push(IERC20(token));
         numRewardTokens++;

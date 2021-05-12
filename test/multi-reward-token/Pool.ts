@@ -63,8 +63,16 @@ describe('Rewards standalone pool multi token', function () {
             ).to.be.revertedWith('only owner can call');
 
             await expect(
+                rewards.connect(dao).approveNewRewardToken(poolToken.address)
+            ).to.be.revertedWith('reward token and pool token must be different');
+
+            await expect(
                 rewards.connect(dao).approveNewRewardToken(rewardToken1.address)
             ).to.not.be.reverted;
+
+            await expect(
+                rewards.connect(dao).approveNewRewardToken(rewardToken1.address)
+            ).to.be.revertedWith('token already approved');
 
             const numTokens = await rewards.numRewardTokens();
             expect(numTokens).to.equal(1);

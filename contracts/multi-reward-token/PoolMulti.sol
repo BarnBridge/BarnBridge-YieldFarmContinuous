@@ -14,8 +14,6 @@ contract PoolMulti is GovernedMulti, ReentrancyGuard {
 
     uint256 constant multiplierScale = 10 ** 18;
 
-    IERC20 public poolToken;
-
     mapping(address => uint256) public rewardsNotTransferred;
     mapping(address => uint256) public balancesBefore;
     mapping(address => uint256) public currentMultipliers;
@@ -79,6 +77,8 @@ contract PoolMulti is GovernedMulti, ReentrancyGuard {
     }
 
     function claim_allTokens() public nonReentrant {
+        _calculateOwed(msg.sender);
+
         for (uint256 i = 0; i < rewardTokens.length; i++) {
             _claim(address(rewardTokens[i]));
         }
@@ -86,6 +86,8 @@ contract PoolMulti is GovernedMulti, ReentrancyGuard {
 
     // claim calculates the currently owed reward and transfers the funds to the user
     function claim(address token) public nonReentrant returns (uint256){
+        _calculateOwed(msg.sender);
+
         return _claim(token);
     }
 
@@ -225,8 +227,6 @@ contract PoolMulti is GovernedMulti, ReentrancyGuard {
     }
 
     function _claim(address token) internal returns (uint256) {
-        _calculateOwed(msg.sender);
-
         uint256 amount = owed[msg.sender][token];
         if (amount == 0) {
             return 0;
