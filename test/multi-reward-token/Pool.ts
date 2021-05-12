@@ -10,7 +10,7 @@ import * as time from '../helpers/time';
 describe('Rewards standalone pool multi token', function () {
     const amount = BigNumber.from(100).mul(BigNumber.from(10).pow(18));
 
-    let rewardToken1: Erc20Mock, rewardToken2: Erc20Mock, syPool: Erc20Mock;
+    let rewardToken1: Erc20Mock, rewardToken2: Erc20Mock, poolToken: Erc20Mock;
     let rewards: PoolMulti;
 
     let user: Signer, userAddress: string;
@@ -26,14 +26,14 @@ describe('Rewards standalone pool multi token', function () {
     before(async function () {
         rewardToken1 = (await deploy.deployContract('ERC20Mock', [18])) as Erc20Mock;
         rewardToken2 = (await deploy.deployContract('ERC20Mock', [18])) as Erc20Mock;
-        syPool = (await deploy.deployContract('ERC20Mock', [18])) as Erc20Mock;
+        poolToken = (await deploy.deployContract('ERC20Mock', [18])) as Erc20Mock;
 
         await setupSigners();
         await setupContracts();
 
         rewards = (await deploy.deployContract(
             'PoolMulti',
-            [await dao.getAddress(), syPool.address])
+            [await dao.getAddress(), poolToken.address])
         ) as PoolMulti;
     });
 
@@ -136,29 +136,29 @@ describe('Rewards standalone pool multi token', function () {
         });
 
         it('updates the user balance and transfers amount to itself', async function () {
-            await syPool.mint(userAddress, amount);
-            await syPool.connect(user).approve(rewards.address, amount);
+            await poolToken.mint(userAddress, amount);
+            await poolToken.connect(user).approve(rewards.address, amount);
 
             await expect(rewards.connect(user).deposit(amount)).to.not.be.reverted;
 
             const balance = await rewards.balances(userAddress);
             expect(balance).to.equal(amount);
 
-            expect(await syPool.balanceOf(userAddress)).to.equal(0);
-            expect(await syPool.balanceOf(rewards.address)).to.equal(amount);
+            expect(await poolToken.balanceOf(userAddress)).to.equal(0);
+            expect(await poolToken.balanceOf(rewards.address)).to.equal(amount);
         });
 
         it('updates pool effective size', async function () {
-            await syPool.mint(userAddress, amount);
-            await syPool.connect(user).approve(rewards.address, amount);
+            await poolToken.mint(userAddress, amount);
+            await poolToken.connect(user).approve(rewards.address, amount);
             await rewards.connect(user).deposit(amount);
 
             expect(await rewards.poolSize()).to.equal(amount);
         });
 
         it('emits Deposit event', async function () {
-            await syPool.mint(userAddress, amount);
-            await syPool.connect(user).approve(rewards.address, amount);
+            await poolToken.mint(userAddress, amount);
+            await poolToken.connect(user).approve(rewards.address, amount);
 
             await expect(rewards.connect(user).deposit(amount))
                 .to.emit(rewards, 'Deposit')
@@ -167,8 +167,8 @@ describe('Rewards standalone pool multi token', function () {
 
         it('updates the reward owed to user and multiplier', async function () {
             await rewards.connect(dao).approveNewRewardToken(rewardToken1.address);
-            await syPool.mint(userAddress, amount.mul(2));
-            await syPool.connect(user).approve(rewards.address, amount.mul(2));
+            await poolToken.mint(userAddress, amount.mul(2));
+            await poolToken.connect(user).approve(rewards.address, amount.mul(2));
             await rewards.connect(user).deposit(amount);
 
             // add some reward to be distributed
@@ -185,9 +185,38 @@ describe('Rewards standalone pool multi token', function () {
                 .to.equal(await rewards.currentMultipliers(rewardToken1.address));
         });
 
+        it('updates the reward owed to user and multiplier (multiple reward tokens)', async function () {
+            await rewards.connect(dao).approveNewRewardToken(rewardToken1.address);
+            await rewards.connect(dao).approveNewRewardToken(rewardToken2.address);
+
+            await poolToken.mint(userAddress, amount.mul(2));
+            await poolToken.connect(user).approve(rewards.address, amount.mul(2));
+            await rewards.connect(user).deposit(amount);
+
+            // add some reward to be distributed
+            await rewardToken1.mint(rewards.address, amount);
+            await rewardToken2.mint(rewards.address, amount);
+
+            await rewards.connect(user).deposit(amount);
+
+            expect(await rewards.owed(userAddress, rewardToken1.address)).to.equal(amount);
+            expect(await rewards.owed(userAddress, rewardToken2.address)).to.equal(amount);
+
+            const currentMultiplierT1 = await rewards.currentMultipliers(rewardToken1.address);
+            expect(currentMultiplierT1).to.not.equal(0);
+
+            const currentMultiplierT2 = await rewards.currentMultipliers(rewardToken2.address);
+            expect(currentMultiplierT2).to.not.equal(0);
+
+            expect(await rewards.userMultipliers(userAddress, rewardToken1.address))
+                .to.equal(currentMultiplierT1);
+            expect(await rewards.userMultipliers(userAddress, rewardToken2.address))
+                .to.equal(currentMultiplierT2);
+        });
+
         it('does not pull bond if function is disabled', async function () {
-            await syPool.mint(userAddress, amount.mul(3));
-            await syPool.connect(user).approve(rewards.address, amount.mul(3));
+            await poolToken.mint(userAddress, amount.mul(3));
+            await poolToken.connect(user).approve(rewards.address, amount.mul(3));
             await rewards.connect(user).deposit(amount);
 
             expect(await rewardToken1.balanceOf(rewards.address)).to.equal(0);
@@ -220,12 +249,12 @@ describe('Rewards standalone pool multi token', function () {
         });
 
         it('does not pull bond if already pulled everything', async function () {
-            await syPool.mint(userAddress, amount.mul(3));
-            await syPool.connect(user).approve(rewards.address, amount.mul(3));
+            await poolToken.mint(userAddress, amount.mul(3));
+            await poolToken.connect(user).approve(rewards.address, amount.mul(3));
 
             const { end } = await setupRewards();
 
-            await helpers.moveAtTimestamp(end + 1 * time.day);
+            await helpers.moveAtTimestamp(end + time.day);
 
             await rewards.connect(user).deposit(amount);
             await rewards.pullRewardFromSource_allTokens();
@@ -241,8 +270,8 @@ describe('Rewards standalone pool multi token', function () {
         });
 
         it('updates the amount owed to user but does not send funds', async function () {
-            await syPool.mint(happyPirateAddress, amount.mul(3));
-            await syPool.connect(happyPirate).approve(rewards.address, amount.mul(3));
+            await poolToken.mint(happyPirateAddress, amount.mul(3));
+            await poolToken.connect(happyPirate).approve(rewards.address, amount.mul(3));
 
             await rewardToken1.connect(communityVault).approve(rewards.address, amount);
 
@@ -270,14 +299,14 @@ describe('Rewards standalone pool multi token', function () {
         });
 
         it('reverts if user does not have enough balance', async function () {
-            await setupUserForWithdraw(syPool, user, amount);
+            await setupUserForWithdraw(poolToken, user, amount);
 
             await expect(rewards.connect(user).withdraw(amount.mul(2)))
                 .to.be.revertedWith('insufficient balance');
         });
 
         it('updates user balance', async function () {
-            await setupUserForWithdraw(syPool, user, amount);
+            await setupUserForWithdraw(poolToken, user, amount);
 
             await expect(rewards.connect(user).withdraw(amount))
                 .to.not.be.reverted;
@@ -285,12 +314,12 @@ describe('Rewards standalone pool multi token', function () {
             const balance = await rewards.balances(userAddress);
             expect(balance).to.equal(0);
 
-            expect(await syPool.balanceOf(userAddress)).to.equal(amount);
-            expect(await syPool.balanceOf(rewards.address)).to.equal(0);
+            expect(await poolToken.balanceOf(userAddress)).to.equal(amount);
+            expect(await poolToken.balanceOf(rewards.address)).to.equal(0);
         });
 
         it('updates the pool size', async function () {
-            await setupUserForWithdraw(syPool, user, amount);
+            await setupUserForWithdraw(poolToken, user, amount);
 
             await expect(rewards.connect(user).withdraw(amount))
                 .to.not.be.reverted;
@@ -299,61 +328,11 @@ describe('Rewards standalone pool multi token', function () {
         });
 
         it('emits Withdraw event', async function () {
-            await setupUserForWithdraw(syPool, user, amount);
+            await setupUserForWithdraw(poolToken, user, amount);
 
             await expect(rewards.connect(user).withdraw(amount))
                 .to.emit(rewards, 'Withdraw')
                 .withArgs(userAddress, amount, 0);
-        });
-    });
-
-    describe('ackFunds', function () {
-        it('calculates the new multiplier when funds are added', async function () {
-            await rewards.connect(dao).approveNewRewardToken(rewardToken1.address);
-            await syPool.mint(happyPirateAddress, amount.mul(2));
-            await syPool.connect(happyPirate).approve(rewards.address, amount.mul(2));
-
-            expect(await rewards.currentMultipliers(rewardToken1.address)).to.equal(0);
-
-            await rewardToken1.mint(rewards.address, amount);
-            await rewards.connect(happyPirate).deposit(amount);
-
-            await expect(rewards.ackFunds_allTokens()).to.not.be.reverted;
-
-            expect(await rewards.currentMultipliers(rewardToken1.address)).to.equal(helpers.tenPow18);
-            expect(await rewards.balancesBefore(rewardToken1.address)).to.equal(amount);
-
-            await rewardToken1.mint(rewards.address, amount);
-
-            await expect(rewards.ackFunds_allTokens()).to.not.be.reverted;
-            expect(await rewards.currentMultipliers(rewardToken1.address)).to.equal(helpers.tenPow18.mul(2));
-            expect(await rewards.balancesBefore(rewardToken1.address)).to.equal(amount.mul(2));
-        });
-
-        it('does not change multiplier on funds balance decrease but changes balance', async function () {
-            await rewards.connect(dao).approveNewRewardToken(rewardToken1.address);
-            await syPool.mint(happyPirateAddress, amount.mul(2));
-            await syPool.connect(happyPirate).approve(rewards.address, amount.mul(2));
-
-            await rewardToken1.mint(rewards.address, amount);
-            await rewards.connect(happyPirate).deposit(amount);
-
-            await expect(rewards.ackFunds_allTokens()).to.not.be.reverted;
-            expect(await rewards.currentMultipliers(rewardToken1.address)).to.equal(helpers.tenPow18);
-            expect(await rewards.balancesBefore(rewardToken1.address)).to.equal(amount);
-
-            await rewardToken1.burnFrom(rewards.address, amount.div(2));
-
-            await expect(rewards.ackFunds_allTokens()).to.not.be.reverted;
-            expect(await rewards.currentMultipliers(rewardToken1.address)).to.equal(helpers.tenPow18);
-            expect(await rewards.balancesBefore(rewardToken1.address)).to.equal(amount.div(2));
-
-            await rewardToken1.mint(rewards.address, amount.div(2));
-            await rewards.ackFunds_allTokens();
-
-            // 1 + 50 / 100 = 1.5
-            expect(await rewards.currentMultipliers(rewardToken1.address))
-                .to.equal(helpers.tenPow18.add(helpers.tenPow18.div(2)));
         });
     });
 
@@ -369,8 +348,8 @@ describe('Rewards standalone pool multi token', function () {
         });
 
         it('transfers the amount to user', async function () {
-            await syPool.mint(happyPirateAddress, amount.mul(2));
-            await syPool.connect(happyPirate).approve(rewards.address, amount.mul(2));
+            await poolToken.mint(happyPirateAddress, amount.mul(2));
+            await poolToken.connect(happyPirate).approve(rewards.address, amount.mul(2));
             const { start } = await setupRewards();
 
             await rewards.connect(happyPirate).deposit(amount);
@@ -400,12 +379,12 @@ describe('Rewards standalone pool multi token', function () {
         });
 
         it('works with multiple users', async function () {
-            await syPool.mint(happyPirateAddress, amount.mul(3));
-            await syPool.mint(flyingParrotAddress, amount.mul(3));
-            await syPool.mint(userAddress, amount.mul(3));
-            await syPool.connect(happyPirate).approve(rewards.address, amount.mul(3));
-            await syPool.connect(flyingParrot).approve(rewards.address, amount.mul(3));
-            await syPool.connect(user).approve(rewards.address, amount.mul(3));
+            await poolToken.mint(happyPirateAddress, amount.mul(3));
+            await poolToken.mint(flyingParrotAddress, amount.mul(3));
+            await poolToken.mint(userAddress, amount.mul(3));
+            await poolToken.connect(happyPirate).approve(rewards.address, amount.mul(3));
+            await poolToken.connect(flyingParrot).approve(rewards.address, amount.mul(3));
+            await poolToken.connect(user).approve(rewards.address, amount.mul(3));
 
             const { start } = await setupRewards();
 
@@ -443,12 +422,12 @@ describe('Rewards standalone pool multi token', function () {
         });
 
         it('works fine after claim', async function () {
-            await syPool.mint(happyPirateAddress, amount.mul(3));
-            await syPool.mint(flyingParrotAddress, amount.mul(3));
-            await syPool.mint(userAddress, amount.mul(3));
-            await syPool.connect(happyPirate).approve(rewards.address, amount.mul(3));
-            await syPool.connect(flyingParrot).approve(rewards.address, amount.mul(3));
-            await syPool.connect(user).approve(rewards.address, amount.mul(3));
+            await poolToken.mint(happyPirateAddress, amount.mul(3));
+            await poolToken.mint(flyingParrotAddress, amount.mul(3));
+            await poolToken.mint(userAddress, amount.mul(3));
+            await poolToken.connect(happyPirate).approve(rewards.address, amount.mul(3));
+            await poolToken.connect(flyingParrot).approve(rewards.address, amount.mul(3));
+            await poolToken.connect(user).approve(rewards.address, amount.mul(3));
 
             const { start } = await setupRewards();
 
@@ -476,7 +455,7 @@ describe('Rewards standalone pool multi token', function () {
             expect(await rewardToken1.balanceOf(rewards.address))
                 .to.equal(expectedBalance1.add(expectedBalance2).add(expectedBalance3));
 
-            await helpers.moveAtTimestamp(start + 1 * time.day);
+            await helpers.moveAtTimestamp(start + time.day);
 
             await rewards.connect(happyPirate).claim(rewardToken1.address);
             const claim1Ts = await helpers.getLatestBlockTimestamp();
@@ -487,7 +466,8 @@ describe('Rewards standalone pool multi token', function () {
 
             // after the first claim is executed, move 1 more day into the future which would increase the
             // total reward by ~14.28 (one day worth of reward)
-            // happyPirate already claimed his reward for day 1 so he should only be able to claim one day worth of rewards
+            // happyPirate already claimed his reward for day 1 so he should only be able to claim
+            // one day worth of rewards
             // flyingParrot did not claim before so he should be able to claim 2 days worth of rewards
             // since there are 3 users, 1 day of rewards for one user is ~4.76 tokens
             await helpers.moveAtTimestamp(start + 2 * time.day);
@@ -496,7 +476,9 @@ describe('Rewards standalone pool multi token', function () {
             const claim2Ts = await helpers.getLatestBlockTimestamp();
 
             const expectedRewardDay2 = calcTotalReward(claim1Ts, claim2Ts);
-            const expectedMultiplier = claim1Multiplier.add(expectedRewardDay2.mul(helpers.tenPow18).div(amount.mul(3)));
+            const expectedMultiplier = claim1Multiplier.add(
+                expectedRewardDay2.mul(helpers.tenPow18).div(amount.mul(3))
+            );
 
             const claim2Multiplier = await rewards.currentMultipliers(rewardToken1.address);
             expect(claim2Multiplier).to.equal(expectedMultiplier);
@@ -518,8 +500,8 @@ describe('Rewards standalone pool multi token', function () {
         });
 
         it('first user gets all reward', async function () {
-            await syPool.mint(happyPirateAddress, amount.mul(2));
-            await syPool.connect(happyPirate).approve(rewards.address, amount.mul(2));
+            await poolToken.mint(happyPirateAddress, amount.mul(2));
+            await poolToken.connect(happyPirate).approve(rewards.address, amount.mul(2));
             const { start } = await setupRewards();
 
             // move one day into the future
@@ -537,8 +519,8 @@ describe('Rewards standalone pool multi token', function () {
         });
 
         it('first user gets all reward after all withdraw', async function () {
-            await syPool.mint(happyPirateAddress, amount.mul(2));
-            await syPool.connect(happyPirate).approve(rewards.address, amount.mul(2));
+            await poolToken.mint(happyPirateAddress, amount.mul(2));
+            await poolToken.connect(happyPirate).approve(rewards.address, amount.mul(2));
             const { start } = await setupRewards();
 
             // move one day into the future
@@ -568,8 +550,8 @@ describe('Rewards standalone pool multi token', function () {
         });
 
         it('works after rate was set to 0 (pool is disabled)', async function () {
-            await syPool.mint(happyPirateAddress, amount.mul(2));
-            await syPool.connect(happyPirate).approve(rewards.address, amount.mul(2));
+            await poolToken.mint(happyPirateAddress, amount.mul(2));
+            await poolToken.connect(happyPirate).approve(rewards.address, amount.mul(2));
             const { start } = await setupRewards();
 
             await rewards.connect(happyPirate).deposit(amount);
@@ -601,18 +583,36 @@ describe('Rewards standalone pool multi token', function () {
             expect(await rewardToken1.balanceOf(happyPirateAddress))
                 .to.equal(expectedReward1.add(expectedReward2).add(expectedReward3));
         });
+
+        it('works with multiple tokens', async function () {
+            await poolToken.mint(happyPirateAddress, amount.mul(2));
+            await poolToken.connect(happyPirate).approve(rewards.address, amount.mul(2));
+            await rewards.connect(happyPirate).deposit(amount);
+
+            const { start } = await setupRewards();
+            await rewardToken2.mint(rewards.address, amount);
+
+            await moveAtTimestamp(start + time.day);
+
+            await expect(rewards.connect(happyPirate).claim_allTokens()).to.not.be.reverted;
+
+            const expectedBalance = calcUserReward(0, await rewards.currentMultipliers(rewardToken1.address), amount);
+
+            expect(await rewardToken1.balanceOf(happyPirateAddress)).to.equal(expectedBalance);
+            expect(await rewardToken2.balanceOf(happyPirateAddress)).to.equal(amount);
+        });
     });
 
     describe('withdrawAndClaim', function () {
         it('works', async function () {
-            await syPool.mint(happyPirateAddress, amount);
-            await syPool.connect(happyPirate).approve(rewards.address, amount);
+            await poolToken.mint(happyPirateAddress, amount);
+            await poolToken.connect(happyPirate).approve(rewards.address, amount);
             const { start } = await setupRewards();
 
             await rewardToken2.mint(rewards.address, amount);
 
             await rewards.connect(happyPirate).deposit(amount);
-            expect(await syPool.balanceOf(happyPirateAddress)).to.equal(0);
+            expect(await poolToken.balanceOf(happyPirateAddress)).to.equal(0);
 
             await moveAtTimestamp(start + time.day);
 
@@ -620,7 +620,7 @@ describe('Rewards standalone pool multi token', function () {
             const multiplier = await rewards.currentMultipliers(rewardToken1.address);
             const expectedBalance = multiplier.mul(amount).div(helpers.tenPow18);
 
-            expect(await syPool.balanceOf(happyPirateAddress)).to.equal(amount);
+            expect(await poolToken.balanceOf(happyPirateAddress)).to.equal(amount);
             expect(await rewardToken1.balanceOf(happyPirateAddress)).to.equal(expectedBalance);
             expect(await rewardToken2.balanceOf(happyPirateAddress)).to.equal(amount);
         });
@@ -628,8 +628,8 @@ describe('Rewards standalone pool multi token', function () {
 
     describe('rewardLeft', function () {
         it('works', async function () {
-            await syPool.mint(happyPirateAddress, amount);
-            await syPool.connect(happyPirate).approve(rewards.address, amount);
+            await poolToken.mint(happyPirateAddress, amount);
+            await poolToken.connect(happyPirate).approve(rewards.address, amount);
             const { start } = await setupRewards();
 
             const ratePerSecond = await rewards.rewardRatesPerSecond(rewardToken1.address);
@@ -687,6 +687,43 @@ describe('Rewards standalone pool multi token', function () {
             await expect(rewards.pullRewardFromSource_allTokens()).to.not.be.reverted;
 
             expect(await rewardToken1.balanceOf(rewards.address)).to.equal(expectedBalance);
+        });
+
+        it('works with multiple tokens', async function () {
+            const rate = amount.div(7 * 24 * 60 * 60);
+
+            await rewardToken1.mint(await communityVault.getAddress(), amount);
+            await rewards.connect(dao).approveNewRewardToken(rewardToken1.address);
+            await rewards.connect(dao).setRewardSource(rewardToken1.address, await communityVault.getAddress());
+            await rewards.connect(dao).setRewardRatePerSecond(rewardToken1.address, rate);
+            const start1 = await getLatestBlockTimestamp();
+
+            await rewardToken1.connect(communityVault).approve(rewards.address, amount);
+
+            await rewardToken2.mint(await communityVault.getAddress(), amount);
+            await rewards.connect(dao).approveNewRewardToken(rewardToken2.address);
+            await rewards.connect(dao).setRewardSource(rewardToken2.address, await communityVault.getAddress());
+            await rewards.connect(dao).setRewardRatePerSecond(rewardToken2.address, rate.div(2));
+            const start2 = await getLatestBlockTimestamp();
+
+            await rewardToken2.connect(communityVault).approve(rewards.address, amount);
+
+            await moveAtTimestamp(start1 + time.day);
+
+            await expect(rewards.pullRewardFromSource_allTokens()).to.not.be.reverted;
+            const ts = await getLatestBlockTimestamp();
+
+            const balanceT1 = await rewardToken1.balanceOf(rewards.address);
+            const balanceT2 = await rewardToken2.balanceOf(rewards.address);
+
+            expect(balanceT1).to.not.equal(0);
+            expect(balanceT2).to.not.equal(0);
+
+            const expectedBalanceT1 = calcTotalReward(start1, ts);
+            const expectedBalanceT2 = calcTotalReward(start2, ts, rate.div(2));
+
+            expect(balanceT1).to.equal(expectedBalanceT1);
+            expect(balanceT2).to.equal(expectedBalanceT2);
         });
     });
 

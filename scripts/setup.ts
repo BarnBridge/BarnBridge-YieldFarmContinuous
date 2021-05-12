@@ -1,4 +1,4 @@
-import { YieldFarmContinuous } from '../typechain';
+import { PoolSingle } from '../typechain';
 import { contractAt, tenPow18 } from '../test/helpers/helpers';
 
 const rewardsAddr = '0x30c7E7e9B3f1f15C2Ba71D8f7e8e68915c967cB3';
@@ -9,8 +9,8 @@ const ratePerWeekScaled = tenPow18.mul(ratePerWeek);
 
 async function main () {
     const rewards = (
-        await contractAt('YieldFarmContinuous', rewardsAddr)
-    ) as YieldFarmContinuous;
+        await contractAt('PoolSingle', rewardsAddr)
+    ) as PoolSingle;
 
     const ratePerSecond = ratePerWeekScaled.div(7*24*60*60);
     await rewards.setRewardsSource(communityVault);

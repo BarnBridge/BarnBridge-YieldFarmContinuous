@@ -94,38 +94,6 @@ contract PoolMulti is GovernedMulti, ReentrancyGuard {
         claim_allTokens();
     }
 
-    function ackFunds_allTokens() public {
-        for (uint256 i = 0; i < rewardTokens.length; i++) {
-            ackFunds(address(rewardTokens[i]));
-        }
-    }
-
-    // ackFunds checks the difference between the last known balance of `token` and the current one
-    // if it goes up, the multiplier is re-calculated
-    // if it goes down, it only updates the known balance
-    function ackFunds(address token) public {
-        uint256 balanceNow = IERC20(token).balanceOf(address(this)).add(rewardsNotTransferred[token]);
-        uint256 balanceBeforeLocal = balancesBefore[token];
-
-        if (balanceNow <= balanceBeforeLocal || balanceNow == 0) {
-            balancesBefore[token] = balanceNow;
-            return;
-        }
-
-        // if there's no bond staked, it doesn't make sense to ackFunds because there's nobody to distribute them to
-        // and the calculation would fail anyways due to division by 0
-        uint256 poolSizeLocal = poolSize;
-        if (poolSizeLocal == 0) {
-            return;
-        }
-
-        uint256 diff = balanceNow.sub(balanceBeforeLocal);
-        uint256 multiplier = currentMultipliers[token].add(diff.mul(multiplierScale).div(poolSizeLocal));
-
-        balancesBefore[token] = balanceNow;
-        currentMultipliers[token] = multiplier;
-    }
-
     function pullRewardFromSource_allTokens() public {
         for (uint256 i = 0; i < rewardTokens.length; i++) {
             pullRewardFromSource(address(rewardTokens[i]));
@@ -146,6 +114,14 @@ contract PoolMulti is GovernedMulti, ReentrancyGuard {
         rewardsNotTransferred[token] = 0;
 
         IERC20(token).safeTransferFrom(rewardSources[token], address(this), amountToTransfer);
+    }
+
+    // rewardLeft returns the amount that was not yet distributed
+    // even though it is not a view, this function is only intended for external use
+    function rewardLeft(address token) external returns (uint256) {
+        softPullReward(token);
+
+        return IERC20(token).allowance(rewardSources[token], address(this)).sub(rewardsNotTransferred[token]);
     }
 
     function softPullReward_allTokens() internal {
@@ -192,12 +168,36 @@ contract PoolMulti is GovernedMulti, ReentrancyGuard {
         lastSoftPullTs[token] = block.timestamp;
     }
 
-    // rewardLeft returns the amount that was not yet distributed
-    // even though it is not a view, this function is only intended for external use
-    function rewardLeft(address token) external returns (uint256) {
-        softPullReward(token);
+    function ackFunds_allTokens() internal {
+        for (uint256 i = 0; i < rewardTokens.length; i++) {
+            ackFunds(address(rewardTokens[i]));
+        }
+    }
 
-        return IERC20(token).allowance(rewardSources[token], address(this)).sub(rewardsNotTransferred[token]);
+    // ackFunds checks the difference between the last known balance of `token` and the current one
+    // if it goes up, the multiplier is re-calculated
+    // if it goes down, it only updates the known balance
+    function ackFunds(address token) internal {
+        uint256 balanceNow = IERC20(token).balanceOf(address(this)).add(rewardsNotTransferred[token]);
+        uint256 balanceBeforeLocal = balancesBefore[token];
+
+        if (balanceNow <= balanceBeforeLocal || balanceNow == 0) {
+            balancesBefore[token] = balanceNow;
+            return;
+        }
+
+        // if there's no bond staked, it doesn't make sense to ackFunds because there's nobody to distribute them to
+        // and the calculation would fail anyways due to division by 0
+        uint256 poolSizeLocal = poolSize;
+        if (poolSizeLocal == 0) {
+            return;
+        }
+
+        uint256 diff = balanceNow.sub(balanceBeforeLocal);
+        uint256 multiplier = currentMultipliers[token].add(diff.mul(multiplierScale).div(poolSizeLocal));
+
+        balancesBefore[token] = balanceNow;
+        currentMultipliers[token] = multiplier;
     }
 
     // _calculateOwed calculates and updates the total amount that is owed to an user and updates the user's multiplier

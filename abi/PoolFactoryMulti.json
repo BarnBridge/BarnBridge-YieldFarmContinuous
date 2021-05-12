@@ -39,18 +39,18 @@
         "type": "address"
       }
     ],
-    "name": "PoolCreated",
+    "name": "PoolMultiCreated",
     "type": "event"
   },
   {
     "inputs": [
       {
         "internalType": "bytes32",
-        "name": "c__0x9c2e70d1",
+        "name": "c__0x44ddbfb5",
         "type": "bytes32"
       }
     ],
-    "name": "c_0x9c2e70d1",
+    "name": "c_0x44ddbfb5",
     "outputs": [],
     "stateMutability": "pure",
     "type": "function"
@@ -64,23 +64,30 @@
       },
       {
         "internalType": "address",
-        "name": "_rewardToken",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
         "name": "_poolToken",
         "type": "address"
       },
       {
-        "internalType": "address",
-        "name": "rewardSource",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "rewardRatePerSecond",
-        "type": "uint256"
+        "components": [
+          {
+            "internalType": "address",
+            "name": "tokenAddress",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "rewardSource",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "rewardRate",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct PoolFactoryMulti.RewardToken[]",
+        "name": "rewardTokens",
+        "type": "tuple[]"
       }
     ],
     "name": "deployPool",
@@ -131,7 +138,7 @@
     "name": "pools",
     "outputs": [
       {
-        "internalType": "contract PoolSingle",
+        "internalType": "contract PoolMulti",
         "name": "",
         "type": "address"
       }
