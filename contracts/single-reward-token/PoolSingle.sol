@@ -34,6 +34,7 @@ contract PoolSingle is GovernedSingle, ReentrancyGuard {
     constructor(address _owner, address _rewardToken, address _poolToken) {
         require(_rewardToken != address(0), "reward token must not be 0x0");
         require(_poolToken != address(0), "pool token must not be 0x0");
+        require(_rewardToken != _poolToken, "reward token and pool token must be different");
 
         transferOwnership(_owner);
 
