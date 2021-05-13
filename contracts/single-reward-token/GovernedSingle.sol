@@ -4,7 +4,7 @@ pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-abstract contract Governed is Ownable {
+abstract contract GovernedSingle is Ownable {
     address public rewardSource;
     uint256 public rewardRatePerSecond;
 

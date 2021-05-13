@@ -39,7 +39,7 @@
         "type": "address"
       }
     ],
-    "name": "PoolCreated",
+    "name": "PoolMultiCreated",
     "type": "event"
   },
   {
@@ -51,23 +51,30 @@
       },
       {
         "internalType": "address",
-        "name": "_rewardToken",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
         "name": "_poolToken",
         "type": "address"
       },
       {
-        "internalType": "address",
-        "name": "rewardSource",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "rewardRatePerSecond",
-        "type": "uint256"
+        "components": [
+          {
+            "internalType": "address",
+            "name": "tokenAddress",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "rewardSource",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "rewardRate",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct PoolFactoryMulti.RewardToken[]",
+        "name": "rewardTokens",
+        "type": "tuple[]"
       }
     ],
     "name": "deployPool",
@@ -118,7 +125,7 @@
     "name": "pools",
     "outputs": [
       {
-        "internalType": "contract YieldFarmContinuous",
+        "internalType": "contract PoolMulti",
         "name": "",
         "type": "address"
       }
