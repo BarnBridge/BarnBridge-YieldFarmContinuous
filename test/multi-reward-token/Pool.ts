@@ -609,6 +609,34 @@ describe('Rewards standalone pool multi token', function () {
             expect(await rewardToken1.balanceOf(happyPirateAddress)).to.equal(expectedBalance);
             expect(await rewardToken2.balanceOf(happyPirateAddress)).to.equal(amount);
         });
+
+        it('works if reactivated', async function () {
+            await poolToken.mint(happyPirateAddress, amount.mul(2));
+            await poolToken.connect(happyPirate).approve(rewards.address, amount.mul(2));
+            const { start } = await setupRewards();
+
+            await rewards.connect(happyPirate).deposit(amount);
+
+            await moveAtTimestamp(start + 7 * time.day);
+
+            await rewards.connect(happyPirate).claim_allTokens();
+
+            const balance = await rewardToken1.balanceOf(rewards.address);
+
+            await moveAtTimestamp(start + 10 * time.day);
+
+            await rewards.connect(dao).setRewardRatePerSecond(rewardToken1.address, tenPow18);
+            const ts1 = await getLatestBlockTimestamp();
+
+            await rewardToken1.connect(communityVault).approve(rewards.address, amount);
+
+            expect(await rewardToken1.balanceOf(rewards.address)).to.equal(balance);
+
+            await rewards.pullRewardFromSource_allTokens();
+            const ts2 = await getLatestBlockTimestamp();
+            expect(await rewardToken1.balanceOf(rewards.address))
+                .to.equal(balance.add(calcTotalReward(ts1, ts2, tenPow18)));
+        });
     });
 
     describe('withdrawAndClaim', function () {

@@ -154,6 +154,7 @@ contract PoolMulti is GovernedMulti, ReentrancyGuard {
         uint256 allowance = IERC20(token).allowance(source, address(this));
         uint256 rewardNotTransferred = rewardsNotTransferred[token];
         if (allowance == 0 || allowance <= rewardNotTransferred) {
+            lastSoftPullTs[token] = block.timestamp;
             return;
         }
 

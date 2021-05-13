@@ -2,10 +2,10 @@ import { contractAt } from '../test/helpers/helpers';
 import { PoolFactoryMulti } from '../typechain';
 import { BigNumber } from 'ethers';
 
-const factoryAddr = '0xB3BB48D48Ac24cC46d880BD825ac90E1ce879CdC';
+const factoryAddr = '0x45785bbdb31587dC206F6FE58e2DcFaE71ac40a1';
 
 const owner = '0xbbbbbbf2e986C085bF79d44BaCFA791C92b71fe8';
-const poolToken = '0x521EE0CeDbed2a5A130B9218551fe492C5c402e4';
+const poolToken = '0xEa8BE82DF1519D4a25E2539bcA0342a1203CD591';
 const rewardTokens = [
     {
         tokenAddress: '0x521EE0CeDbed2a5A130B9218551fe492C5c402e4',
