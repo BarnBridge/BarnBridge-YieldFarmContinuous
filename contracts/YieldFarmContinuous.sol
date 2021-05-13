@@ -176,6 +176,7 @@ contract YieldFarmContinuous is Governed {
         // if there's no allowance left on the source contract, don't try to pull anything else
         uint256 allowance = rewardToken.allowance(source, address(this));
         if (allowance == 0 || allowance <= rewardNotTransferred) {
+            lastSoftPullTs = block.timestamp;
             return;
         }
 
