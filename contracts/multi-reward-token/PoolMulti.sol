@@ -76,11 +76,13 @@ contract PoolMulti is GovernedMulti, ReentrancyGuard {
         emit Withdraw(msg.sender, amount, newBalance);
     }
 
-    function claim_allTokens() public nonReentrant {
+    function claim_allTokens() public nonReentrant returns (uint256[] memory amounts){
+        amounts = new uint256[](rewardTokens.length);
         _calculateOwed(msg.sender);
 
         for (uint256 i = 0; i < rewardTokens.length; i++) {
-            _claim(address(rewardTokens[i]));
+            uint256 amount = _claim(address(rewardTokens[i]));
+            amounts[i] = amount;
         }
     }
 
