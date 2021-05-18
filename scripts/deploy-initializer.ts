@@ -2,13 +2,15 @@ import * as deploy from '../test/helpers/deploy';
 import { PoolsInitializer } from '../typechain';
 
 const poolsMulti: string[] = [
-    '0x8eBaea860D7A7853e9E84b4a8449245c4eB4de0B',
-    '0x787Ee19b9Efd915Bdf3DCa19aCAc5F1b0e2B74aE',
-    '0x46DC9860A6348B83a2Fa6Ae8Eff25318E769A7F0',
+    '0x69951B60B6253697F29c8311bFcEA6Da09BBac0d',
+    '0xEAdFc8b994BF3eE23dC0033e6f11dEe4b166672E',
+    '0xF4bde50CdF4ee4CF3FB8702fceb6fD499A92792d',
+    '0x51d924bF2FF813a68BD5f86Cdcc98918f2AE5868',
 ];
 const poolsSingle: string[] = [
-    '0x12544d725e7ffaeffbe00a4e4c66f319887cef43',
-    '0x5e2Dfdc819B325D62Fb35ae145699d164a031eEd',
+    '0x707c1bD52C4718BF040f350F7FE6ba0AdB484E8d',
+    '0x7f7D4dFd9733ae12e6a5991d42aF16418f227b6E',
+    '0xEA32E4E751D49757906E1153eF7A30fCAb1b6462',
 ];
 
 async function main () {

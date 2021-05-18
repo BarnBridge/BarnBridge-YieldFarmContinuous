@@ -1,7 +1,7 @@
 import { contractAt } from '../test/helpers/helpers';
 import { PoolsInitializer } from '../typechain';
 
-const initializerAddr = '0x6a27a65E45E9d344167A3cde1494955830a718d2';
+const initializerAddr = '0x19B2Cc0A829bDE567d7ADC5f95b08D43FE993b36';
 
 async function main () {
     const initializer = (await contractAt('PoolsInitializer', initializerAddr)) as PoolsInitializer;
