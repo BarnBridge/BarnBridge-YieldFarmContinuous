@@ -1,7 +1,7 @@
 import * as deploy from '../test/helpers/deploy';
 import { PoolFactorySingle } from '../typechain';
 
-const _owner = '0x89d652C64d7CeE18F5DF53B24d9D29D130b18798';
+const _owner = '0xbbbbbbf2e986C085bF79d44BaCFA791C92b71fe8';
 
 async function main () {
     const factory = (
