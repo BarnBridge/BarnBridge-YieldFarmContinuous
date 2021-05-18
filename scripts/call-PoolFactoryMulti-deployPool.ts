@@ -1,31 +1,54 @@
-import { contractAt } from '../test/helpers/helpers';
+import { calcRate, contractAt } from '../test/helpers/helpers';
 import { PoolFactoryMulti } from '../typechain';
 import { BigNumber } from 'ethers';
 
-const factoryAddr = '0x45785bbdb31587dC206F6FE58e2DcFaE71ac40a1';
+const zero = BigNumber.from(0);
+const zeroAddress = '0x0000000000000000000000000000000000000000';
 
+const factoryAddr = '0x33c3De5B470D196e4936847E999d9fE3296Ad7Cc';
 const owner = '0xbbbbbbf2e986C085bF79d44BaCFA791C92b71fe8';
-const poolToken = '0xEa8BE82DF1519D4a25E2539bcA0342a1203CD591';
-const rewardTokens = [
+
+const pools = [
     {
-        tokenAddress: '0x521EE0CeDbed2a5A130B9218551fe492C5c402e4',
-        rewardSource: '0xB56ccaD94c714c3Ad1807EB3f5d651C7633BB252',
-        rewardRate: BigNumber.from('16534391534391534'),
+        poolToken: '0xdfcb1c9d8209594cbc39745b274e9171ba4fd343',
+        rewardTokens: [
+            {
+                tokenAddress: '0x521EE0CeDbed2a5A130B9218551fe492C5c402e4',
+                rewardSource: '0xbbbbbbf2e986C085bF79d44BaCFA791C92b71fe8',
+                rewardRate: calcRate(1000),
+            },
+            {
+                tokenAddress: '0x4A69d0F05c8667B993eFC2b500014AE1bC8fD958',
+                rewardSource: zeroAddress,
+                rewardRate: zero,
+            },
+        ],
     },
     {
-        tokenAddress: '0x4A69d0F05c8667B993eFC2b500014AE1bC8fD958',
-        rewardSource: '0x0000000000000000000000000000000000000000',
-        rewardRate: BigNumber.from(0),
+        poolToken: '0xe3d9c0ca18e6757e975b6f663811f207ec26c2b3',
+        rewardTokens: [
+            {
+                tokenAddress: '0x521EE0CeDbed2a5A130B9218551fe492C5c402e4',
+                rewardSource: '0xbbbbbbf2e986C085bF79d44BaCFA791C92b71fe8',
+                rewardRate: calcRate(1000),
+            },
+            {
+                tokenAddress: '0x4A69d0F05c8667B993eFC2b500014AE1bC8fD958',
+                rewardSource: zeroAddress,
+                rewardRate: zero,
+            },
+        ],
     },
 ];
 
 async function main () {
     const factory = (await contractAt('PoolFactoryMulti', factoryAddr)) as PoolFactoryMulti;
 
-    await factory.deployPool(owner, poolToken, rewardTokens);
-
-    const pool = await factory.pools((await factory.numberOfPools()).sub(1));
-    console.log(`Deployed pool at address: ${pool}`);
+    for (const p of pools) {
+        await factory.deployPool(owner, p.poolToken, p.rewardTokens);
+        const poolAddr = await factory.pools((await factory.numberOfPools()).sub(1));
+        console.log(`Deployed pool for token ${p.poolToken} at address: ${poolAddr}`);
+    }
 }
 
 main()

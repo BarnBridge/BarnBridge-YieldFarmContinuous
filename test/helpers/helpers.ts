@@ -10,7 +10,7 @@ export async function getLatestBlock (): Promise<any> {
     return await ethers.provider.send('eth_getBlockByNumber', ['latest', false]);
 }
 
-export async function getLatestBlockTimestamp ():Promise<number> {
+export async function getLatestBlockTimestamp (): Promise<number> {
     return parseInt((await getLatestBlock()).timestamp);
 }
 
@@ -28,4 +28,8 @@ export async function moveAtTimestamp (timestamp: number): Promise<void> {
 
 export async function contractAt (name: string, address: string): Promise<Contract> {
     return await ethers.getContractAt(name, address);
+}
+
+export function calcRate (amount: number): BigNumber {
+    return BigNumber.from(amount).mul(tenPow18).div(7 * 24 * 60 * 60);
 }

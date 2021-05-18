@@ -1,14 +1,14 @@
 import * as deploy from '../test/helpers/deploy';
 import { PoolFactorySingle } from '../typechain';
 
-const _dao = '0x4cAE362D7F227e3d306f70ce4878E245563F3069';
+const _owner = '0xbbbbbbf2e986C085bF79d44BaCFA791C92b71fe8';
 
 async function main () {
     const factory = (
-        await deploy.deployContract('PoolFactorySingle', [_dao])
+        await deploy.deployContract('PoolFactorySingle', [_owner])
     ) as PoolFactorySingle;
 
-    console.log(`Pool deployed at: ${factory.address}`);
+    console.log(`Factory deployed at: ${factory.address}`);
 }
 
 main()

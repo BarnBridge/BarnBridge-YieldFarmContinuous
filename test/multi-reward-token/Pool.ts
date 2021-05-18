@@ -353,6 +353,10 @@ describe('Rewards standalone pool multi token', function () {
             await expect(rewards.connect(happyPirate).claim(rewardToken2.address)).to.not.be.reverted;
             expect(await rewards.connect(happyPirate).callStatic.claim(rewardToken1.address)).to.equal(0);
             expect(await rewards.connect(happyPirate).callStatic.claim(rewardToken2.address)).to.equal(0);
+
+            const amounts = await rewards.connect(happyPirate).callStatic.claim_allTokens();
+            expect(amounts[0]).to.equal(0);
+            expect(amounts[1]).to.equal(0);
         });
 
         it('transfers the amount to user', async function () {
