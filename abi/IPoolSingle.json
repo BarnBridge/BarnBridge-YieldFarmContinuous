@@ -1,0 +1,9 @@
+[
+  {
+    "inputs": [],
+    "name": "pullRewardFromSource",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]
