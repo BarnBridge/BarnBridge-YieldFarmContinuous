@@ -156,7 +156,7 @@ Update line 4 of scripts/call-initializer.ts with the address given by deploy-in
 
     npx hardhat run --network kovan scripts/call-initializer.ts
     
-## Use deploy.ts to deploy the bb_cUSDC pool
+### Use deploy.ts to deploy the bb_cUSDC pool
 Update line 4 of the scripts/deploy.ts file with your your Kovan test wallet address.
     
     npx hardhat run --network kovan scripts/deploy.ts
