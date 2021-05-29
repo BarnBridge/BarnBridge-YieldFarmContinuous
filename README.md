@@ -20,6 +20,7 @@ Allows Owner to approve new reward tokens, set the reward source address and rew
 
 ## Smart Contract Architecture
 Overview
+
 ![Junior Pool](https://gblobscdn.gitbook.com/assets%2F-MIu3rMElIO-jG68zdaV%2F-MXHutr14sDo0hYi6gg3%2F-MXHwLedyIac7BAL_YJO%2Fjunior%20tokens.png?alt=media&token=607fe998-db46-47e1-8c24-397630103da2)
 
 Check out more detailed smart contract Slither graphs with all the dependencies: [YieldFarm-Continuous Slither Graphs](https://github.com/BarnBridge/sc-graphs/tree/main/BarnBridge-YieldFarmContinuous).
