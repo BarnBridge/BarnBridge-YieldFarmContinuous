@@ -159,6 +159,8 @@ Update line 4 of scripts/call-initializer.ts with the address given by deploy-in
 Update line 4 of the scripts/deploy.ts file with your your Kovan test wallet address.
     
     npx hardhat run --network kovan scripts/deploy.ts
+## Use additional scripts to change setup parameters and query functions
+With the addresses given by the previous deployments, you can use the calculate-next-address.ts, calculate-rate.ts, and query-contracts.ts scripts to gather data, and use the setup.ts script to update parameters.
 
 ## Audits
 - [Hacken](https://github.com/BarnBridge/BarnBridge-PM/blob/master/audits/BarnBridge%20Yield%20Farming%20Continuous%20audit%20by%20Hacken.pdf)
