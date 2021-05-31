@@ -1,4 +1,5 @@
 # BarnBridge YieldFarm-Continuous
+![](https://i.imgur.com/q42744q.png)
 
 Implements single and multi-token rewards pools with continuous rewards
 
@@ -113,7 +114,7 @@ Check out more detailed smart contract Slither graphs with all the dependencies:
 ## Running Code Coverage Tests
     npm run coverage
 
-    
+## Deploying to Kovan    
 ### Use deploy-factory.ts to deploy the Single-Token Pool Factory
 Update line 4 (_owner) of the scripts/deploy-factory.ts file with your own Kovan test wallet address
 
