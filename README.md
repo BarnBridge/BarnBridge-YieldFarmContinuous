@@ -36,8 +36,6 @@ Check out more detailed smart contract Slither graphs with all the dependencies:
 ### Use Git to pull down the BarnBridge-SmartYieldBonds repository from GitHub
     git clone https://github.com/BarnBridge/BarnBridge-DAO.git
     cd BarnBridge-YieldFarming
-### Create config.ts using the sample template config.sample.ts
-    cp config.sample.ts config.ts
 
 ## Updating the config.ts file
 ### Create an API key with Infura to deploy to Ethereum Public Testnet. In this guide, we are using Kovan.
@@ -45,60 +43,16 @@ Check out more detailed smart contract Slither graphs with all the dependencies:
 1. Navigate to [Infura.io](https://infura.io/) and create an account
 2. Log in and select "Get started and create your first project to access the Ethereum network"
 3. Create a project and name it appropriately
-4. Then, switch the endpoint to Rinkeby, copy the https URL and paste it into the section named `rinkeby` 
-5. Finally, insert the mnemonic phrase for your testing wallet. You can use a MetaMask instance, and switch the network to Rinkeby on the upper right. DO NOT USE YOUR PERSONAL METAMASK SEED PHRASE; USE A DIFFERENT BROWSER WITH AN INDEPENDENT METAMASK INSTALLATION
+4. Copy the Project ID from the Settings page and paste it into the section labeled INFURA in the .env file
+### Create an API key with Etherscan 
+5. Navigate to [EtherScan](https://etherscan.io/) and create an account 
+6. Log in and navigate to [MyAPIKey](https://etherscan.io/myapikey) 
+7. Use the Add button to create an API key, and paste it into the section labeled ETHERSCAN in the .env file 
+### Update the .env file with your test wallet information
+5. Finally, insert the mnemonic phrase for your testing wallet. You can use a MetaMask instance, and switch the network to Kovan on the upper right. DO NOT USE YOUR PERSONAL METAMASK SEED PHRASE; USE A DIFFERENT BROWSER WITH AN INDEPENDENT METAMASK INSTALLATION
 6. You'll need some Kovan-ETH (it is free) in order to pay the gas costs of deploying the contracts on the TestNet; you can use your GitHub account to authenticate to the [KovanFaucet](https://faucet.kovan.network/) and receive 2 Kovan-ETH for free every 24 hours
 
-### Create an API key with Etherscan 
-1. Navigate to [EtherScan](https://etherscan.io/) and create an account 
-2. Log in and navigate to [MyAPIKey](https://etherscan.io/myapikey) 
-3. Use the Add button to create an API key, and paste it into the indicated section towards the bottom of the `config.ts` file
 
-### Verify contents of config.ts; it should look like this:
-
-```js
-        import { NetworksUserConfig } from "hardhat/types";
-        import { EtherscanConfig } from "@nomiclabs/hardhat-etherscan/dist/src/types";
-
-        export const networks: NetworksUserConfig = {
-            // Needed for `solidity-coverage`
-            coverage: {
-                url: "http://localhost:8555"
-            },
-
-            // Kovan
-            kovan: {
-                url: "https://kovan.infura.io/v3/INFURA-API-KEY",
-                chainId: 42,
-                accounts: {
-                    mnemonic: "YourKovanTestWalletMnemonicPhrase",
-                    path: "m/44'/60'/0'/0",
-                    initialIndex: 0,
-                    count: 10
-                },
-                gas: 3716887,
-                gasPrice: 20000000000, // 20 gwei
-                gasMultiplier: 1.5
-            },
-
-            // Mainnet
-            mainnet: {
-                url: "https://mainnet.infura.io/v3/YOUR-INFURA-KEY",
-                chainId: 1,
-                accounts: ["0xaaaa"],
-                gas: "auto",
-                gasPrice: 50000000000,
-                gasMultiplier: 1.5
-            }
-        };
-
-        // Use to verify contracts on Etherscan
-        // https://buidler.dev/plugins/nomiclabs-buidler-etherscan.html
-        export const etherscan: EtherscanConfig = {
-            apiKey: "YourEtherscanAPIKey"
-        };
-
-```
 ## Installing
 
 ### Install NodeJS dependencies which include HardHat
@@ -115,54 +69,11 @@ Check out more detailed smart contract Slither graphs with all the dependencies:
     npm run coverage
 
 ## Deploying to Kovan    
-### Use deploy-factory.ts to deploy the Single-Token Pool Factory
-Update line 4 (_owner) of the scripts/deploy-factory.ts file with your own Kovan test wallet address
 
-    npx hardhat run --network kovan scripts/deploy-factory.js # outputs single token pool factory address
-    
-### Use deploy-factory-multi.ts to deploy the Multi-Token Pool Factory
-Update line 4 (_dao) of the scripts/deploy-factory-multi.ts file with your own Kovan test wallet address
+    npm run deploy-from-env
 
-    npx hardhat run --network kovan scripts/deploy-factory-multi.js # outputs multi token pool factory address
-    
-### Use call-PoolFactorySingle-deployPool-kovan.ts to call the Single-Token Pool initilizer
-Update line 5 in the scripts/call-PoolFactorySingle-deployPool-kovan.ts file with the address given by deploy-factory.ts
-Update line 6 in the scripts/call-PoolFactorySingle-deployPool-kovan.ts file with your own Kovan test wallet address
-Update line 23 in the scripts/call-PoolFactorySingle-deployPool-kovan.ts file with your own Kovan test wallet address
-**NOTE:** in order to test distribution of rewards, your Kovan wallet must contain Kovan-BOND; contact the Integrations Team for distribution
-
-    npx hardhat run --network kovan scripts/call-PoolFactorySingle-deployPool-kovan.ts
-    
-Note the output addresses of the two Single-Token Pools to be used in the call to deploy-initializer-kovan.ts
-
- 
-### Use call-PoolFactoryMulti-deployPool-kovan.ts to call the Multi-Token Pool initilizer
-Update line 8 in the scripts/call-PoolFactoryMulti-deployPool-kovan.ts file with the address given by deploy-factory-multi.ts
-Update line 9 in the scripts/call-PoolFactoryMulti-deployPool-kovan.ts file with your own Kovan test wallet address
-Update line 14 in the scripts/call-PoolFactoryMulti-deployPool-kovan.ts file with either your own deployment of the Community Vault from BarnBridge-YieldFarming/scripts/deploy-kovan.js or the BarnBridge Kovan Community Vault at 0xB56ccaD94c714c3Ad1807EB3f5d651C7633BB252
-**NOTE:** in order to test distribution of rewards, your Kovan wallet must contain Kovan-BOND; contact the Integrations Team for distribution
-
-    npx hardhat run --network kovan scripts/call-PoolFactoryMulti-deployPool-kovan.ts
-
-Note the output addresses of the two Multi-Token Pools to be used in the call to deploy-initializer-kovan.ts
-
-### Use deploy-initializer-kovan.ts to deploy the initializer
-Update lines 5 and 6 of the scripts/deploy-initializer-kovan.ts file with the two Multi-Token Pools addresses generated by call-PoolFactoryMulti-deployPool-kovan.ts
-Update lines 9 and 10 of the scripts/deploy-initializer-kovan.ts file with the two Single-Token Pools addresses generated by call-PoolFactorySingle-deployPool-kovan.ts
-
-    npx hardhat run --network kovan scripts/deploy-initializer-kovan.ts # gives address of initializer
-
-### Use call-initializer.ts to call the initializer
-Update line 4 of scripts/call-initializer.ts with the address given by deploy-initializer-kovan.ts
-
-    npx hardhat run --network kovan scripts/call-initializer.ts
-    
-### Use deploy.ts to deploy the bb_cUSDC pool
-Update line 4 of the scripts/deploy.ts file with your your Kovan test wallet address.
-    
-    npx hardhat run --network kovan scripts/deploy.ts
 ## Use additional scripts to change setup parameters and query functions
-With the addresses given by the previous deployments, you can use the calculate-next-address.ts, calculate-rate.ts, and query-contracts.ts scripts to gather data, and use the setup.ts script to update parameters.
+With the addresses given by the previous deployment, you can use the calculate-next-address.ts, calculate-rate.ts, and query-contracts.ts scripts to gather data, and use the setup.ts script to update parameters.
 
 ## Audits
 - [Hacken](https://github.com/BarnBridge/BarnBridge-PM/blob/master/audits/BarnBridge%20Yield%20Farming%20Continuous%20audit%20by%20Hacken.pdf)

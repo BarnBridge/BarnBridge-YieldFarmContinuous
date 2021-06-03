@@ -4,7 +4,6 @@ declare global {
       BOND: string;
       OWNER: string;
       REWARD_SOURCE: string;
-      DAO: string;
       CV: string;
       STKAAVE: string;
       BB_ADAI: string;

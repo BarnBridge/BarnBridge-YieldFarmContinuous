@@ -10,7 +10,6 @@ const zeroAddress = '0x0000000000000000000000000000000000000000';
 const owner = process.env.OWNER;
 const reward_token = process.env.BOND
 const reward_source = process.env.REWARD_SOURCE
-const dao = process.env.DAO
 const cv = process.env.CV;
 const BOND = process.env.BOND;
 const stkAAVE = process.env.STKAAVE;
@@ -49,8 +48,6 @@ const pools_multi = [
             },
         ],
     },
-    // TODO: Kovan bb_aUSDG 
-    // TODO: Kovan bb_aUSDC
     {
         poolToken: bb_ausdt, // bb_aUSDT
         rewardTokens: [
@@ -66,15 +63,13 @@ const pools_multi = [
             },
         ],
     },
+    // TODO: bb_aUSDG not yet deployed on Kovan
+    // TODO: bb_aUSDC not yet deployed on Kovan
 ];
 
 async function main () {
     var poolsSingle: string[] = [];
     var poolsMulti: string[] = [];
-    console.log(bb_adai_multi_rate); 
-    console.log(bb_ausdt_multi_rate); 
-    console.log(JSON.stringify(pools_multi, null, 4));
-    //return;
 
     // Deploy Single Pool Factory	
     const factory = (
@@ -92,13 +87,12 @@ async function main () {
 
     // Deploy Multi Pool Factory
     const factoryMulti = (
-        await deploy.deployContract('PoolFactoryMulti', [dao])
+        await deploy.deployContract('PoolFactoryMulti', [owner])
     ) as PoolFactoryMulti;
     console.log(`Multi Token Pool Factory deployed at: ${factoryMulti.address}`);
 
     // For each pool in poolsMulti call deployPool
     for (const q of pools_multi) {
-	// fails at the line below... :( BigNumber INVALID_ARGUMENT
         await factoryMulti.deployPool(owner, q.poolToken, q.rewardTokens);
         const poolAddrMulti = await factoryMulti.pools((await factoryMulti.numberOfPools()).sub(1));
         console.log(`Deployed multi-pool for token ${q.poolToken} at address: ${poolAddrMulti}`);
