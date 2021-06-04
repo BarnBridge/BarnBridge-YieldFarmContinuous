@@ -10,6 +10,10 @@ contract ERC20Mock is ERC20("ERC20Mock", "MCK") {
     address public transferRecipient = address(0);
     uint256 public transferAmount = 0;
 
+    constructor (uint8 decimals) {
+        _setupDecimals(decimals);
+    }
+
     function mint(address user, uint256 amount) public {
         _mint(user, amount);
     }

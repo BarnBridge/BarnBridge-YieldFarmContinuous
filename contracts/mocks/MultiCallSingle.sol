@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.7.6;
 
-import "../YieldFarmContinuous.sol";
+import "../single-reward-token/PoolSingle.sol";
 
-contract MultiCall {
+contract MultiCallSingle {
     function call_pullRewardFromSource(address rewards) public {
-        YieldFarmContinuous r = YieldFarmContinuous(rewards);
+        PoolSingle r = PoolSingle(rewards);
 
         r.pullRewardFromSource();
         r.pullRewardFromSource();

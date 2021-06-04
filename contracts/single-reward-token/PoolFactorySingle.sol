@@ -2,10 +2,10 @@
 pragma solidity 0.7.6;
 pragma experimental ABIEncoderV2;
 
-import "./YieldFarmContinuous.sol";
+import "./PoolSingle.sol";
 
-contract PoolFactory is Ownable {
-    YieldFarmContinuous[] public pools;
+contract PoolFactorySingle is Ownable {
+    PoolSingle[] public pools;
     uint256 public numberOfPools;
 
     event PoolCreated(address pool);
@@ -17,7 +17,7 @@ contract PoolFactory is Ownable {
     function deployPool(address _owner, address _rewardToken, address _poolToken, address rewardSource, uint256 rewardRatePerSecond) public returns (address) {
         require(msg.sender == owner(), "only owner can call");
 
-        YieldFarmContinuous pool = new YieldFarmContinuous(address(this), _rewardToken, _poolToken);
+        PoolSingle pool = new PoolSingle(address(this), _rewardToken, _poolToken);
         pools.push(pool);
         numberOfPools++;
 

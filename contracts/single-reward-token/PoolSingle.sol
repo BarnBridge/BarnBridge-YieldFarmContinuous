@@ -5,10 +5,10 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "./interfaces/ISmartYield.sol";
-import "./Governed.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "./GovernedSingle.sol";
 
-contract YieldFarmContinuous is Governed {
+contract PoolSingle is GovernedSingle, ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -34,6 +34,7 @@ contract YieldFarmContinuous is Governed {
     constructor(address _owner, address _rewardToken, address _poolToken) {
         require(_rewardToken != address(0), "reward token must not be 0x0");
         require(_poolToken != address(0), "pool token must not be 0x0");
+        require(_rewardToken != _poolToken, "reward token and pool token must be different");
 
         transferOwnership(_owner);
 
@@ -82,7 +83,7 @@ contract YieldFarmContinuous is Governed {
     }
 
     // claim calculates the currently owed reward and transfers the funds to the user
-    function claim() public returns (uint256){
+    function claim() public nonReentrant returns (uint256){
         _calculateOwed(msg.sender);
 
         uint256 amount = owed[msg.sender];
@@ -176,6 +177,7 @@ contract YieldFarmContinuous is Governed {
         // if there's no allowance left on the source contract, don't try to pull anything else
         uint256 allowance = rewardToken.allowance(source, address(this));
         if (allowance == 0 || allowance <= rewardNotTransferred) {
+            lastSoftPullTs = block.timestamp;
             return;
         }
 
