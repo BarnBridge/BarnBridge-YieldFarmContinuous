@@ -1,6 +1,11 @@
 declare global {
   namespace NodeJS {
     interface ProcessEnv {
+      CHAIN: string;
+      CHAINID: string;
+      PROVIDER: string;
+      MNEMONIC: string;
+      ETHERSCAN: string;
       BOND: string;
       OWNER: string;
       REWARD_SOURCE: string;
