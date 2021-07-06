@@ -6,7 +6,7 @@ const zero = BigNumber.from(0);
 const zeroAddress = '0x0000000000000000000000000000000000000000';
 
 const factoryAddr = '0xdBe3C9D09F039693E46Ba5bd2746FAd0DCbe1C1a';
-const owner = '0x558Ef269Bcc4cc9F2e14E3f4301231fbeb85d95F';
+const owner = '0x89d652C64d7CeE18F5DF53B24d9D29D130b18798';
 
 const BOND = '0xA041544fe2BE56CCe31Ebb69102B965E06aacE80';
 const WMATIC = '0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270';
@@ -33,8 +33,8 @@ const pools = [
         rewardTokens: [
             {
                 tokenAddress: BOND,
-                rewardSource: cv,
-                rewardRate: calcRate(500),
+                rewardSource: zeroAddress,
+                rewardRate: zero,
             },
             {
                 tokenAddress: WMATIC,
@@ -48,8 +48,8 @@ const pools = [
         rewardTokens: [
             {
                 tokenAddress: BOND,
-                rewardSource: cv,
-                rewardRate: calcRate(10_000),
+                rewardSource: zeroAddress,
+                rewardRate: zero,
             },
             {
                 tokenAddress: WMATIC,
@@ -64,7 +64,9 @@ async function main () {
     const factory = (await contractAt('PoolFactoryMulti', factoryAddr)) as PoolFactoryMulti;
 
     for (const p of pools) {
-        await factory.deployPool(owner, p.poolToken, p.rewardTokens);
+        const tx = await factory.deployPool(owner, p.poolToken, p.rewardTokens);
+        await tx.wait();
+
         const poolAddr = await factory.pools((await factory.numberOfPools()).sub(1));
         console.log(`Deployed pool for token ${p.poolToken} at address: ${poolAddr}`);
     }
