@@ -80,10 +80,24 @@ With the addresses given by the previous deployment, you can use the calculate-n
 
 ## Deployed contracts
 ### Mainnet
+
 ```shell
 PoolFactory deployed at: 0x2e93403C675Ccb9C564edf2dC6001233d0650582
+
 SY cUSDC pool deployed at: 0x68af34129755091e22f91899ceac48657e5a5062
+
+SY crUSDC pool deployed at: 0x7f7D4dFd9733ae12e6a5991d42aF16418f227b6E
+SY crUSDT pool deployed at: 0xEA32E4E751D49757906E1153eF7A30fCAb1b6462
+SY crDAI pool deployed at: 0x707c1bD52C4718BF040f350F7FE6ba0AdB484E8d
+
+SY aDAI pool deployed at: 0x69951B60B6253697F29c8311bFcEA6Da09BBac0d
+SY aGUSD pool deployed at: 0xEAdFc8b994BF3eE23dC0033e6f11dEe4b166672E
+SY aUSDC pool deployed at: 0xF4bde50CdF4ee4CF3FB8702fceb6fD499A92792d
+SY aUSDT pool deployed at: 0x51d924bF2FF813a68BD5f86Cdcc98918f2AE5868
+
 ```
+
+For information on deployed contracts, please see [Yield Farming Smart Contract Addresses](https://integrations.barnbridge.com/smart-contract-addresses) on our Developer Documentation.
 
 ## Known issues
 
